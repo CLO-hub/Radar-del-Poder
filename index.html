@@ -1,0 +1,1790 @@
+<title>RADAR DEL PODER</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Buscador ciudadano de contratación pública colombiana conectado a SECOP (datos.gov.co).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: banda oscura de radar arriba (buscador), cuerpo claro de fichas de investigación debajo; una sola columna en móvil. */
+:root {
+  --bg: #F8F8FC;
+  --surface: #FFFFFF;
+  --surface-2: #F1EFF9;
+  --ink: #151522;
+  --muted: #5B5873;
+  --line: #E2DFEE;
+  --violet: #6C3BFF;
+  --violet-ink: #5A2EE6;
+  --violet-soft: #EEE8FF;
+  --lime: #C9FF36;
+  --coral: #FF5C67;
+  --coral-ink: #C8303C;
+  --coral-soft: #FFE6E8;
+  --blue: #248BFF;
+  --blue-ink: #1569D0;
+  --blue-soft: #E3F0FF;
+  --amber: #B7791F;
+  --amber-soft: #FFF3D6;
+  --ok: #1F8A5B;
+  --ok-soft: #E1F5EC;
+  --band: #151522;
+  --band-ink: #F8F8FC;
+  --band-muted: #A9A6C2;
+  --band-line: #2E2C44;
+  --shadow: 0 1px 2px rgba(21,21,34,.06), 0 8px 24px rgba(21,21,34,.06);
+
+  --f-display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --s-xs: .78rem; --s-sm: .875rem; --s-md: 1rem; --s-lg: 1.25rem; --s-xl: 1.6rem; --s-2xl: 2.2rem;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12121C; --surface: #1C1B2A; --surface-2: #242337; --ink: #F1F0F8; --muted: #A9A6C2; --line: #2F2D45;
+    --violet: #9474FF; --violet-ink: #B39CFF; --violet-soft: #2A2350; --coral: #FF6E78; --coral-ink: #FF8C94; --coral-soft: #3A1D25;
+    --blue: #4DA2FF; --blue-ink: #7DBBFF; --blue-soft: #16294A; --amber: #F2B84B; --amber-soft: #3A2E12; --ok: #4FD39A; --ok-soft: #12332A;
+    --band: #0B0B13; --band-line: #26243A; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12121C; --surface: #1C1B2A; --surface-2: #242337; --ink: #F1F0F8; --muted: #A9A6C2; --line: #2F2D45;
+  --violet: #9474FF; --violet-ink: #B39CFF; --violet-soft: #2A2350; --coral: #FF6E78; --coral-ink: #FF8C94; --coral-soft: #3A1D25;
+  --blue: #4DA2FF; --blue-ink: #7DBBFF; --blue-soft: #16294A; --amber: #F2B84B; --amber-soft: #3A2E12; --ok: #4FD39A; --ok-soft: #12332A;
+  --band: #0B0B13; --band-line: #26243A; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: var(--s-md); line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--band); }
+a { color: var(--violet-ink); }
+:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.mono { font-family: var(--f-mono); font-size: .92em; }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+h2 { font-family: var(--f-display); font-stretch: 85%; font-weight: 800; font-size: var(--s-xl); letter-spacing: -.01em; line-height: 1.1; }
+h3 { font-family: var(--f-display); font-stretch: 90%; font-weight: 700; font-size: var(--s-lg); line-height: 1.2; }
+.eyebrow { font-family: var(--f-mono); font-size: var(--s-xs); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+p { margin: 0; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.btn { appearance: none; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); font: 600 var(--s-sm) var(--f-body); padding: 8px 14px; border-radius: 999px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; text-decoration: none; transition: transform .12s, border-color .12s, background .12s; }
+.btn:hover { border-color: var(--violet); transform: translateY(-1px); }
+.btn.primary { background: var(--violet); border-color: var(--violet); color: #fff; }
+.btn.lime { background: var(--lime); border-color: var(--lime); color: #151522; }
+.btn[disabled] { opacity: .5; cursor: not-allowed; transform: none; }
+
+/* ---------- Topbar + hero (banda oscura) ---------- */
+.band { background: var(--band); color: var(--band-ink); position: relative; overflow: hidden; }
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9; background: var(--band); border-bottom: 1px solid var(--band-line); }
+.topbar .wrap { display: flex; align-items: center; gap: 14px; padding-block: 10px; flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 10px; color: var(--band-ink); text-decoration: none; font-family: var(--f-display); font-weight: 900; font-stretch: 112%; letter-spacing: .02em; font-size: 1rem; }
+.logo svg { flex: none; }
+.topnav { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
+.topnav a { color: var(--band-muted); text-decoration: none; font-size: var(--s-sm); padding: 6px 10px; border-radius: 999px; }
+.topnav a:hover, .topnav a[aria-current="page"] { color: var(--band-ink); background: var(--band-line); }
+.themebtn { background: none; border: 1px solid var(--band-line); color: var(--band-muted); border-radius: 999px; padding: 5px 10px; cursor: pointer; font: inherit; font-size: var(--s-xs); }
+
+.hero { padding-block: 44px 36px; position: relative; }
+.hero canvas { position: absolute; right: -120px; top: -140px; width: 620px; height: 620px; opacity: .55; pointer-events: none; }
+.hero h1 { font-family: var(--f-display); font-weight: 900; font-stretch: 125%; font-size: clamp(2.4rem, 8vw, 5.4rem); line-height: .9; letter-spacing: -.02em; position: relative; }
+.hero h1 span { color: var(--lime); }
+.hero .tag { font-size: clamp(1.05rem, 2.6vw, 1.4rem); color: var(--band-ink); margin-top: 14px; position: relative; }
+.hero .tag em { font-style: normal; color: var(--lime); }
+.searchbox { margin-top: 26px; display: flex; gap: 8px; background: #fff; border-radius: 16px; padding: 6px; position: relative; max-width: 820px; box-shadow: 0 0 0 4px rgba(108,59,255,.35); }
+.searchbox input { flex: 1; min-width: 0; border: 0; outline: none; font: 600 1.1rem var(--f-body); padding: 12px 12px; color: #151522; background: transparent; border-radius: 12px; }
+.searchbox input::placeholder { color: #7C7994; font-weight: 400; }
+.searchbox button { border: 0; background: var(--lime); color: #151522; font: 800 1rem var(--f-display); font-stretch: 110%; letter-spacing: .04em; text-transform: uppercase; padding: 0 22px; border-radius: 12px; cursor: pointer; }
+.searchbox button:hover { filter: brightness(.95); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; position: relative; }
+.chip { border: 1px solid var(--band-line); background: transparent; color: var(--band-muted); font: var(--s-xs) var(--f-mono); padding: 5px 10px; border-radius: 999px; cursor: pointer; }
+.chip:hover { color: var(--band-ink); border-color: var(--lime); }
+.chip.on { background: var(--lime); color: #151522; border-color: var(--lime); }
+.examples { margin-top: 12px; color: var(--band-muted); font-size: var(--s-sm); position: relative; }
+.examples button { background: none; border: 0; color: var(--band-ink); text-decoration: underline; text-decoration-color: var(--violet); text-underline-offset: 3px; font: inherit; cursor: pointer; padding: 2px 4px; }
+
+.status-strip { border-top: 1px solid var(--band-line); }
+.status-strip .wrap { display: flex; gap: 18px; flex-wrap: wrap; padding-block: 10px; font-size: var(--s-xs); color: var(--band-muted); font-family: var(--f-mono); align-items: center; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: 1px; background: var(--band-muted); }
+.dot.live { background: var(--lime); box-shadow: 0 0 0 3px rgba(201,255,54,.2); }
+.dot.err { background: var(--coral); }
+.dot.wait { background: #F2B84B; }
+
+/* ---------- Main ---------- */
+main { padding-block: 28px 60px; }
+.notice { border: 1.5px solid var(--coral); background: var(--coral-soft); border-radius: var(--r); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.notice.info { border-color: var(--blue); background: var(--blue-soft); }
+.notice b { font-family: var(--f-display); font-stretch: 95%; }
+.section { margin-top: 30px; display: flex; flex-direction: column; gap: 14px; }
+
+.modgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.mod { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: inherit; transition: transform .15s, border-color .15s; position: relative; }
+.mod:hover { transform: translateY(-2px); border-color: var(--violet); }
+.mod .n { font-family: var(--f-mono); font-size: var(--s-xs); color: var(--muted); }
+.mod h3 { font-size: 1.15rem; }
+.mod p { font-size: var(--s-sm); color: var(--muted); }
+.badge { display: inline-flex; align-items: center; gap: 5px; font: 600 .72rem var(--f-mono); padding: 3px 8px; border-radius: 999px; letter-spacing: .02em; width: fit-content; }
+.badge.ok { background: var(--ok-soft); color: var(--ok); }
+.badge.part { background: var(--amber-soft); color: var(--amber); }
+.badge.pend { background: var(--surface-2); color: var(--muted); }
+.badge.alta { background: var(--coral); color: #fff; }
+.badge.media { background: var(--amber-soft); color: var(--amber); }
+.badge.baja, .badge.sin { background: var(--ok-soft); color: var(--ok); }
+.badge.nd { background: var(--surface-2); color: var(--muted); }
+.badge.live { background: var(--violet-soft); color: var(--violet-ink); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+@media (max-width: 420px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.kpi .v { font-family: var(--f-display); font-weight: 800; font-stretch: 90%; font-size: 1.5rem; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.kpi .l { font-size: var(--s-xs); color: var(--muted); }
+
+.profile-head { display: flex; flex-direction: column; gap: 8px; padding-bottom: 6px; }
+.profile-head h2 { font-size: clamp(1.5rem, 4vw, 2.4rem); }
+.idline { display: flex; gap: 8px 16px; flex-wrap: wrap; font-size: var(--s-sm); color: var(--muted); }
+
+.tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--line); margin-top: 6px; scrollbar-width: thin; }
+.tabs button { border: 0; background: none; font: 600 var(--s-sm) var(--f-body); color: var(--muted); padding: 10px 12px; border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--violet); }
+.tabs button .cnt { font-family: var(--f-mono); font-size: .7rem; background: var(--coral); color: #fff; border-radius: 999px; padding: 1px 6px; margin-left: 4px; }
+
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--s-sm); }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 var(--s-xs) var(--f-mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); background: var(--surface-2); position: sticky; top: 0; cursor: pointer; white-space: nowrap; }
+td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: 0; }
+td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--violet-ink); font: inherit; font-weight: 600; cursor: pointer; text-align: left; text-decoration: underline; text-decoration-color: transparent; }
+.linkbtn:hover { text-decoration-color: currentColor; }
+.objeto { max-width: 46ch; }
+
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; font-size: var(--s-sm); }
+.bar .track { grid-column: 1 / -1; height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.bar .fill { height: 100%; background: var(--violet); border-radius: 999px; }
+.bar .fill.coral { background: var(--coral); }
+.bar .fill.blue { background: var(--blue); }
+.bar .lbl { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.alert { border: 1px solid var(--line); border-left: 6px solid var(--line); border-radius: 12px; background: var(--surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.alert.alta { border-left-color: var(--coral); }
+.alert.media { border-left-color: var(--amber); }
+.alert.sin { border-left-color: var(--ok); }
+.alert.nd { border-left-color: var(--line); }
+.alert summary { cursor: pointer; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; list-style: none; }
+.alert summary::-webkit-details-marker { display: none; }
+.alert summary h3 { font-size: 1.05rem; flex: 1; min-width: 200px; }
+.alert dl { display: grid; grid-template-columns: minmax(110px, 160px) minmax(0, 1fr); gap: 6px 14px; margin: 6px 0 0; font-size: var(--s-sm); }
+.alert dt { color: var(--muted); font-family: var(--f-mono); font-size: var(--s-xs); text-transform: uppercase; letter-spacing: .04em; padding-top: 2px; }
+.alert dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 520px) { .alert dl { grid-template-columns: 1fr; } }
+
+.qlink { font-family: var(--f-mono); font-size: .72rem; color: var(--muted); overflow-wrap: anywhere; }
+.qlink a { color: var(--muted); }
+.panel-err { border: 1px dashed var(--coral); border-radius: 10px; padding: 10px 12px; font-size: var(--s-sm); display: flex; flex-direction: column; gap: 4px; }
+.loading { color: var(--muted); font-size: var(--s-sm); display: flex; align-items: center; gap: 8px; }
+.loading::before { content: ""; width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--violet); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px 18px; font-size: var(--s-sm); }
+.facts div { display: flex; flex-direction: column; border-bottom: 1px dashed var(--line); padding-block: 6px; min-width: 0; }
+.facts span:first-child { color: var(--muted); font-size: var(--s-xs); font-family: var(--f-mono); text-transform: uppercase; letter-spacing: .04em; }
+.facts span:last-child { overflow-wrap: anywhere; }
+
+.legend3 { display: flex; gap: 12px; flex-wrap: wrap; font-size: var(--s-xs); color: var(--muted); }
+.legend3 span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.legend3 .h::before { background: var(--ok); } .legend3 .i::before { background: var(--amber); } .legend3 .p::before { background: var(--muted); }
+
+#cy { height: 460px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+
+/* Cartograma */
+.carto { display: grid; grid-template-columns: repeat(8, minmax(34px, 1fr)); gap: 4px; max-width: 520px; }
+.tile { aspect-ratio: 1; border-radius: 8px; border: 0; font: 700 .68rem var(--f-mono); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: #151522; padding: 0; max-width: 100%; }
+.tile small { font-weight: 400; font-size: .58rem; opacity: .85; }
+.tile.dark { color: #fff; }
+.tile:hover { outline: 2px solid var(--ink); }
+.tile.sel { outline: 3px solid var(--lime); outline-offset: 1px; }
+.scale { display: flex; align-items: center; gap: 8px; font-size: var(--s-xs); color: var(--muted); }
+.scale i { width: 140px; height: 10px; border-radius: 999px; background: linear-gradient(90deg, #EEE8FF, #6C3BFF, #2A0F8F); }
+
+.chart svg { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--muted); font: 11px var(--f-mono); }
+.chart .lab { fill: var(--ink); font-weight: 600; }
+
+.field { display: flex; flex-direction: column; gap: 4px; font-size: var(--s-sm); min-width: 0; }
+.field input, .field select, .field textarea { font: inherit; padding: 9px 10px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); min-width: 0; }
+.field textarea { min-height: 280px; font-family: var(--f-mono); font-size: .82rem; }
+.formgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+
+.srcrow td:first-child { min-width: 180px; }
+.footer { border-top: 1px solid var(--line); padding-block: 22px 40px; font-size: var(--s-sm); color: var(--muted); }
+.toast { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: var(--s-sm); z-index: 20; }
+.lead { font-size: 1.05rem; max-width: 70ch; }
+.prose { max-width: 72ch; display: flex; flex-direction: column; gap: 10px; }
+.prose li { margin-bottom: 4px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+.hero.compact { padding-block: 16px 18px; }
+.hero.compact h1, .hero.compact .tag, .hero.compact .examples, .hero.compact canvas { display: none; }
+.hero.compact .searchbox { margin-top: 0; }
+
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="logo" href="#inicio" aria-label="RADAR DEL PODER, inicio">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="11.5" fill="none" stroke="#C9FF36" stroke-width="1.6"/><circle cx="13" cy="13" r="6.5" fill="none" stroke="#6C3BFF" stroke-width="1.6"/><path d="M13 13 L22 6" stroke="#C9FF36" stroke-width="2" stroke-linecap="round"/><circle cx="18" cy="17" r="2" fill="#FF5C67"/></svg>
+      RADAR DEL PODER
+    </a>
+    <nav class="topnav" aria-label="Principal">
+      <a href="#inicio">Buscar</a>
+      <a href="#modulos">Módulos</a>
+      <a href="#sector">Sectores</a>
+      <a href="#m4">Territorio</a>
+      <a href="#metodologia">Metodología</a>
+      <a href="#fuentes">Fuentes</a>
+    </nav>
+    <button class="themebtn" id="themebtn" type="button" aria-label="Cambiar tema">◐ Tema</button>
+  </div>
+</header>
+
+<section class="band" id="heroband">
+  <div class="wrap hero">
+    <canvas id="radar" width="620" height="620" aria-hidden="true"></canvas>
+    <h1>RADAR<br>DEL <span>PODER</span></h1>
+    <p class="tag">El poder deja huellas. <em>Encuéntralas.</em></p>
+    <form class="searchbox" id="searchform" role="search">
+      <label for="q" class="sr" hidden>Buscar</label>
+      <input id="q" name="q" type="search" autocomplete="off" placeholder="Alcaldía, empresa, NIT, contrato CO1.PCCNTR…, departamento o sector">
+      <button type="submit">Buscar</button>
+    </form>
+    <div class="chips" id="modechips" role="radiogroup" aria-label="Tipo de búsqueda">
+      <button type="button" class="chip on" data-mode="auto" role="radio" aria-checked="true">Detectar</button>
+      <button type="button" class="chip" data-mode="entidad" role="radio" aria-checked="false">Entidad pública</button>
+      <button type="button" class="chip" data-mode="proveedor" role="radio" aria-checked="false">Contratista</button>
+      <button type="button" class="chip" data-mode="obra" role="radio" aria-checked="false">Obra</button>
+      <button type="button" class="chip" data-mode="contrato" role="radio" aria-checked="false">Nº de contrato</button>
+    </div>
+    <p class="examples">Prueba: <button type="button" data-ex="Alcaldía de Ibagué">Alcaldía de Ibagué</button> · <button type="button" data-ex="Instituto Nacional de Vías">Instituto Nacional de Vías</button> · <button type="button" data-ex="Unidad Nacional para la Gestión del Riesgo">UNGRD</button> · <button type="button" data-ex="Tolima">Tolima</button> · <button type="button" data-ex="Agricultura">Sector agricultura</button></p>
+  </div>
+  <div class="status-strip">
+    <div class="wrap" id="statusstrip"><span><span class="dot wait"></span>Comprobando conexión con datos.gov.co…</span></div>
+  </div>
+</section>
+
+<main class="wrap" id="view" aria-live="polite"></main>
+
+<footer class="footer">
+  <div class="wrap stack">
+    <p>RADAR DEL PODER consulta datos abiertos oficiales. Una alerta es una señal para investigar, no una prueba de ilegalidad ni de corrupción. Cada cifra enlaza a la consulta original para que pueda reproducirla.</p>
+    <p class="mono">Fuente principal: Colombia Compra Eficiente · SECOP II y SECOP Integrado vía datos.gov.co (API Socrata/SODA).</p>
+  </div>
+</footer>
+
+<script>
+'use strict';
+/* RADAR DEL PODER — cliente web
+ * Consulta en vivo la API Socrata (SODA) de datos.gov.co. Sin datos simulados:
+ * si una consulta falla, la interfaz lo dice y muestra la URL de la consulta para reproducirla.
+ */
+(() => {
+  // ---------------------------------------------------------------- Configuración
+  const params = new URLSearchParams(location.search);
+  const CFG = {
+    // Si se despliega el backend (proxy con caché), defina window.RADAR_API_BASE o ?api=https://su-backend
+    base: String(window.RADAR_API_BASE || params.get('api') || 'https://www.datos.gov.co').replace(/\/$/, ''),
+    portal: 'https://www.datos.gov.co',
+    concurrency: 4,
+    timeoutMs: 35000,
+  };
+
+  const DS = {
+    contratos: { id: 'jbjy-vk9h', nombre: 'SECOP II – Contratos Electrónicos' },
+    procesos: { id: 'p6dx-8zbt', nombre: 'SECOP II – Procesos de Contratación' },
+    integrado: { id: 'rpmr-utcd', nombre: 'SECOP Integrado (SECOP I y II)' },
+    adiciones: { id: 'cb9c-h8sn', nombre: 'SECOP II – Modificaciones a contratos' },
+    ejecucion: { id: 'mfmm-jqmq', nombre: 'SECOP II – Ejecución de contratos' },
+    multas2: { id: 'it5q-hg94', nombre: 'SECOP II – Multas y sanciones' },
+    multas1: { id: '4n4q-k399', nombre: 'SECOP I – Multas y sanciones' },
+  };
+
+  const TODAY = new Date();
+  const YEAR = TODAY.getFullYear();
+  const isoDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const daysAgo = (n) => { const d = new Date(TODAY); d.setDate(d.getDate() - n); return isoDay(d); };
+
+  const state = { conn: 'checking', meta: {}, mode: 'auto', qlog: [], current: null, lastSearch: null };
+
+  // ---------------------------------------------------------------- Utilidades
+  const $ = (sel, el = document) => el.querySelector(sel);
+  const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+  const sum = (arr, k) => arr.reduce((a, r) => a + num(typeof k === 'function' ? k(r) : r[k]), 0);
+  const nf0 = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
+  const nf1 = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 });
+  const fmtN = (v) => nf0.format(num(v));
+  const fmtPct = (v, d = 1) => (Number.isFinite(v) ? new Intl.NumberFormat('es-CO', { maximumFractionDigits: d }).format(v * 100) + ' %' : '—');
+  function fmtCOP(v) {
+    const n = num(v); const a = Math.abs(n);
+    if (a >= 1e12) return '$ ' + nf1.format(n / 1e12) + ' billones';
+    if (a >= 1e9) return '$ ' + nf0.format(n / 1e6) + ' millones';
+    if (a >= 1e6) return '$ ' + nf1.format(n / 1e6) + ' millones';
+    return '$ ' + nf0.format(n);
+  }
+  const fullCOP = (v) => '$ ' + nf0.format(num(v));
+  const fmtDate = (s) => (s ? String(s).slice(0, 10) : '—');
+  const sqlStr = (s) => "'" + String(s).replace(/'/g, "''") + "'";
+  const digits = (s) => String(s || '').replace(/\D/g, '');
+  const normTxt = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+  const STOP = new Set(['DE', 'DEL', 'LA', 'LAS', 'EL', 'LOS', 'Y', 'E', 'EN', 'A', 'PARA', 'POR', 'AL', 'SAS', 'S', 'SA']);
+  const GENERIC = new Set(['ALCALDIA', 'MUNICIPIO', 'MUNICIPAL', 'GOBERNACION', 'DEPARTAMENTO', 'DEPARTAMENTAL', 'DISTRITO', 'DISTRITAL']);
+  function searchWords(text) {
+    const ws = normTxt(text).replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter((w) => w.length > 1 && !STOP.has(w));
+    const specific = ws.filter((w) => !GENERIC.has(w));
+    return (specific.length ? specific : ws).slice(0, 6);
+  }
+  // Filtro fino en el cliente: descarta coincidencias espurias del comodín de vocales
+  const matchesAll = (text, ws) => { const t = normTxt(text); return ws.every((w) => t.includes(w)); };
+  function likeAll(field, text) {
+    const fields = Array.isArray(field) ? field : [field];
+    const ws = searchWords(text);
+    if (!ws.length) return null;
+    // Las vocales se vuelven comodín de un carácter para tolerar tildes (Í, Á…) presentes en los datos.
+    return ws.map((w) => { const pat = `'%${w.replace(/[AEIOU]/g, '_')}%'`; const ors = fields.map((f) => `upper(${f}) like ${pat}`); return ors.length > 1 ? `(${ors.join(' OR ')})` : ors[0]; }).join(' AND ');
+  }
+  const periodWhere = (field, p) => `${field} between '${p.from}T00:00:00' and '${p.to}T23:59:59'`;
+  const isCompanyDoc = (t) => /NIT/i.test(t || '');
+  function maskDoc(doc, tipo) {
+    if (!doc) return '—';
+    if (isCompanyDoc(tipo) || !tipo) return doc;
+    const d = String(doc); return '••••' + d.slice(-4);
+  }
+  const urlOf = (u) => (u && typeof u === 'object' ? u.url : u) || '';
+  function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+
+  // ---------------------------------------------------------------- Cliente SODA
+  class QErr extends Error { constructor(status, msg, url) { super(msg); this.status = status; this.url = url; } }
+  const cache = new Map();
+  let active = 0; const waiters = [];
+  const acquire = () => new Promise((res) => { if (active < CFG.concurrency) { active++; res(); } else waiters.push(res); });
+  const release = () => { const w = waiters.shift(); if (w) w(); else active--; };
+
+  function buildUrl(base, ds, p) {
+    const u = new URL(`${base}/resource/${ds}.json`);
+    for (const [k, v] of Object.entries(p)) if (v != null && v !== '') u.searchParams.set('$' + k, String(v));
+    return u.toString();
+  }
+  async function soql(dsKey, p) {
+    const ds = DS[dsKey].id;
+    const url = buildUrl(CFG.base, ds, p);
+    const portalUrl = buildUrl(CFG.portal, ds, p);
+    if (cache.has(url)) return { rows: cache.get(url), url: portalUrl, ds: dsKey };
+    await acquire();
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), CFG.timeoutMs);
+    try {
+      const r = await fetch(url, { signal: ctrl.signal, headers: { Accept: 'application/json' } });
+      if (!r.ok) {
+        let msg = r.statusText;
+        try { const j = await r.json(); msg = j.message || j.error || JSON.stringify(j).slice(0, 300); } catch (_) { /* sin cuerpo */ }
+        throw new QErr(r.status, msg, portalUrl);
+      }
+      const rows = await r.json();
+      cache.set(url, rows);
+      state.qlog.push({ ds: DS[dsKey].nombre, id: ds, url: portalUrl, at: new Date().toISOString(), n: rows.length });
+      return { rows, url: portalUrl, ds: dsKey };
+    } catch (e) {
+      if (e instanceof QErr) throw e;
+      throw new QErr(0, e.name === 'AbortError' ? 'La fuente tardó demasiado en responder.' : 'No fue posible conectar con la fuente desde esta vista.', portalUrl);
+    } finally { clearTimeout(t); release(); }
+  }
+  // Envuelve una consulta para que su falla no tumbe toda la ficha
+  async function part(dsKey, p) {
+    for (let attempt = 0; ; attempt++) {
+      try { const r = await soql(dsKey, p); return { ok: true, ...r }; }
+      catch (e) {
+        // Un reintento ante tiempo agotado o error temporal del servidor (la API se satura con agregaciones pesadas)
+        if (attempt === 0 && (e.status === 0 || e.status >= 500)) { await new Promise((res) => setTimeout(res, 1500)); continue; }
+        return { ok: false, rows: [], err: e.message, status: e.status, url: e.url, ds: dsKey };
+      }
+    }
+  }
+  // Si una agregación ordenada falla, se repite sin orden y se ordena en el navegador
+  async function partSorted(dsKey, p, run, key = 'v') {
+    const r = await run(dsKey, p);
+    if (r.ok) return r;
+    const { order, limit, ...rest } = p;
+    const r2 = await run(dsKey, { ...rest, limit: 2000 });
+    if (!r2.ok) return r;
+    r2.rows.sort((a, b) => num(b[key]) - num(a[key])); r2.rows = r2.rows.slice(0, limit || 20); r2.note = 'Ordenado en el navegador porque la consulta ordenada no respondió.';
+    return r2;
+  }
+  // Búsqueda por texto: el parámetro $q usa el índice de texto completo de Socrata (rápido) y el
+  // filtro LIKE asegura que las palabras estén en el campo correcto. Si $q no encuentra nada
+  // (por ejemplo, palabras incompletas), se repite solo con LIKE, que es más lento pero tolerante.
+  async function textPart(dsKey, p, text) {
+    const words = searchWords(text).map((w) => w.toLowerCase()).join(' ');
+    const r = await part(dsKey, words ? { ...p, q: words } : p);
+    if (words && (!r.ok || !r.rows.length)) return part(dsKey, p);
+    return r;
+  }
+  const qlink = (prt) => (prt && prt.url ? `<p class="qlink">Consulta: <a href="${esc(prt.url)}" target="_blank" rel="noopener">${esc(DS[prt.ds]?.nombre || 'API')} ↗</a></p>` : '');
+  function errBox(prt) {
+    if (!prt || prt.ok) return '';
+    return `<div class="panel-err"><b>Fuente no disponible en este momento.</b><span>${esc(prt.err)}${prt.status ? ' (HTTP ' + prt.status + ')' : ''}</span><a href="${esc(prt.url)}" target="_blank" rel="noopener" class="qlink">Abrir la consulta oficial directamente ↗</a></div>`;
+  }
+
+  // ---------------------------------------------------------------- Estado de conexión
+  async function probe() {
+    const strip = $('#statusstrip');
+    const ids = ['contratos', 'integrado', 'multas2'];
+    const out = [];
+    let anyOk = false;
+    await Promise.all(ids.map(async (k) => {
+      try {
+        const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 15000);
+        const r = await fetch(`${CFG.base}/api/views/${DS[k].id}.json`, { signal: ctrl.signal });
+        clearTimeout(t);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const j = await r.json();
+        state.meta[k] = { updated: j.rowsUpdatedAt ? new Date(j.rowsUpdatedAt * 1000) : null, name: j.name };
+        anyOk = true;
+      } catch (e) { state.meta[k] = { error: e.message }; }
+    }));
+    state.conn = anyOk ? 'live' : 'blocked';
+    for (const k of ids) {
+      const m = state.meta[k];
+      if (m.updated) out.push(`<span><span class="dot live"></span>${esc(DS[k].nombre)} · consulta en vivo · fuente actualizada ${esc(isoDay(m.updated))}</span>`);
+      else out.push(`<span><span class="dot err"></span>${esc(DS[k].nombre)} · fuente inaccesible desde esta vista</span>`);
+    }
+    strip.innerHTML = out.join('');
+    if (!anyOk) showBlockedNotice();
+  }
+  function showBlockedNotice() {
+    const v = $('#view');
+    if ($('#blocked', v)) return;
+    const n = document.createElement('div');
+    n.id = 'blocked'; n.className = 'notice'; n.style.marginBottom = '18px';
+    n.innerHTML = `<b>Esta vista no puede conectarse a datos.gov.co.</b>
+      <span>El navegador o el entorno donde abrió la página bloquea conexiones a sitios externos (es lo que ocurre dentro de la vista previa de Claude). No se mostrarán datos inventados: cada búsqueda le dará el enlace a la consulta oficial para abrirla aparte.</span>
+      <span>Para usar la herramienta completa, ábrala desde su despliegue público (GitHub Pages) o con el backend incluido. Instrucciones en <a href="#fuentes">Fuentes y despliegue</a>.</span>`;
+    v.prepend(n);
+  }
+
+  // ---------------------------------------------------------------- Departamentos (cartograma)
+  const DEPTS = [
+    ['SAP', 'San Andrés', 0, 0, /SAN ANDRES/], ['LAG', 'La Guajira', 6, 0, /GUAJIRA/],
+    ['ATL', 'Atlántico', 4, 1, /ATLANTICO/], ['MAG', 'Magdalena', 5, 1, /MAGDALENA/], ['CES', 'Cesar', 6, 1, /^CESAR/],
+    ['COR', 'Córdoba', 3, 2, /CORDOBA/], ['SUC', 'Sucre', 4, 2, /^SUCRE/], ['BOL', 'Bolívar', 5, 2, /BOLIVAR/], ['NSA', 'Norte de Santander', 6, 2, /NORTE DE SANTANDER/],
+    ['CHO', 'Chocó', 2, 3, /CHOCO/], ['ANT', 'Antioquia', 3, 3, /ANTIOQUIA/], ['SAN', 'Santander', 5, 3, /^SANTANDER/], ['BOY', 'Boyacá', 6, 3, /BOYACA/], ['ARA', 'Arauca', 7, 3, /ARAUCA/],
+    ['RIS', 'Risaralda', 2, 4, /RISARALDA/], ['CAL', 'Caldas', 3, 4, /CALDAS/], ['CUN', 'Cundinamarca', 4, 4, /CUNDINAMARCA/], ['BOG', 'Bogotá D.C.', 5, 4, /BOGOTA/], ['CAS', 'Casanare', 6, 4, /CASANARE/], ['VIC', 'Vichada', 7, 4, /VICHADA/],
+    ['VAC', 'Valle del Cauca', 2, 5, /VALLE/], ['QUI', 'Quindío', 3, 5, /QUINDIO/], ['TOL', 'Tolima', 4, 5, /TOLIMA/], ['MET', 'Meta', 5, 5, /^META/], ['GUA', 'Guainía', 7, 5, /GUAINIA/],
+    ['CAU', 'Cauca', 2, 6, /^CAUCA/], ['HUI', 'Huila', 3, 6, /HUILA/], ['CAQ', 'Caquetá', 4, 6, /CAQUETA/], ['GUV', 'Guaviare', 5, 6, /GUAVIARE/], ['VAU', 'Vaupés', 6, 6, /VAUPES/],
+    ['NAR', 'Nariño', 2, 7, /NARINO/], ['PUT', 'Putumayo', 3, 7, /PUTUMAYO/], ['AMA', 'Amazonas', 5, 7, /AMAZONAS/],
+  ].map(([code, name, c, r, re]) => ({ code, name, c, r, re }));
+  const deptOf = (raw) => { const n = normTxt(raw).trim(); return DEPTS.find((d) => d.re.test(n)) || null; };
+  const deptExact = (raw) => { const n = normTxt(raw).trim(); return DEPTS.find((d) => normTxt(d.name) === n || (d.code === 'BOG' && /^BOGOTA( D\.?C\.?)?$/.test(n))) || null; };
+
+  // Valores exactos del campo "departamento" en SECOP II que corresponden a cada casilla (evita que "Santander" incluya "Norte de Santander")
+  let deptRawPromise = null;
+  async function deptRawValues(code) {
+    if (!deptRawPromise) deptRawPromise = part('contratos', { select: 'departamento,count(*) as n', group: 'departamento', limit: 200 });
+    const p = await deptRawPromise;
+    if (!p.ok) { deptRawPromise = null; return null; }
+    return p.rows.map((r) => r.departamento).filter((raw) => deptOf(raw)?.code === code);
+  }
+
+  // ---------------------------------------------------------------- Módulos
+  const MODS = [
+    { id: 'm1', n: '01', t: '¿Quién puso a quién?', s: 'Red de entidades, contratistas y ordenadores del gasto documentada en SECOP II.', st: 'part', stl: 'Parcial · SECOP en vivo' },
+    { id: 'sector', n: '02', t: 'Sectores del Estado', s: 'Agricultura, ambiente, salud, transporte…: entidades, contratistas, modalidades y territorios de cada sector.', st: 'ok', stl: 'Operativo · SECOP en vivo' },
+    { id: 'm3', n: '03', t: 'Detector de contratos sospechosos', s: 'Nueve indicadores de riesgo explicables y reproducibles por entidad.', st: 'ok', stl: 'Operativo · SECOP en vivo' },
+    { id: 'm4', n: '04', t: 'Mapa del clientelismo', s: 'Contratación por departamento, contratación directa y concentración territorial.', st: 'part', stl: 'Parcial · sin datos per cápita' },
+    { id: 'm5', n: '05', t: '¿Dónde está la obra?', s: 'Contratos de obra: valores, pagos, plazos, prórrogas y avance reportado.', st: 'part', stl: 'Parcial · sin reportes ciudadanos' },
+    { id: 'm6', n: '06', t: 'Los dueños del Estado', s: 'Perfil de contratistas: entidades, montos, territorios, consorcios.', st: 'ok', stl: 'Operativo · SECOP en vivo' },
+    { id: 'm9', n: '07', t: 'La lupa de las sanciones', s: 'Multas y sanciones contractuales publicadas en SECOP I y II.', st: 'part', stl: 'Parcial · solo sanciones contractuales' },
+  ];
+
+  // ---------------------------------------------------------------- Router
+  const view = () => $('#view');
+  function setView(html, compact = true) {
+    $('.hero').classList.toggle('compact', compact);
+    view().innerHTML = html;
+    if (state.conn === 'blocked') showBlockedNotice();
+    window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+  }
+  function navTo(token) { if (location.hash !== '#' + token) location.hash = token; else route(); }
+  function route() {
+    const h = (location.hash || '#inicio').slice(1);
+    $$('.topnav a').forEach((a) => a.setAttribute('aria-current', a.getAttribute('href') === '#' + h ? 'page' : 'false'));
+    if (h === 'inicio' || h === '') return renderHome();
+    if (h === 'modulos') { renderHome(); setTimeout(() => $('#modulos')?.scrollIntoView({ behavior: 'smooth' }), 50); return; }
+    if (h === 'fuentes') return renderSources();
+    if (h === 'metodologia') return renderMethod();
+    if (h === 'resultados') return state.lastSearch ? renderResults(state.lastSearch.q, state.lastSearch.mode) : renderHome();
+    if (h === 'ficha') return state.current ? state.current.render() : renderHome();
+    if (h === 'm3') return renderM3();
+    if (h === 'm4') return renderTerritory();
+    if (h === 'm5') return renderObras();
+    if (h === 'm6') return renderM6();
+    if (h === 'm9') return renderM9();
+    if (h === 'sector') return renderSector();
+    if (h === 'm1') return renderModuleInfo(h);
+    renderHome();
+  }
+
+  // ---------------------------------------------------------------- Inicio
+  function modCards() {
+    return MODS.map((m) => `<a class="mod" href="#${m.id}"><span class="n">MÓDULO ${m.n}</span><h3>${esc(m.t)}</h3><p>${esc(m.s)}</p><span class="badge ${m.st}">${esc(m.stl)}</span></a>`).join('');
+  }
+  function renderHome() {
+    setView(`
+      <div class="section" style="margin-top:0">
+        <div class="grid3">
+          <div class="card"><span class="eyebrow">Ciudadanía</span><h3>¿Qué pasa con la plata de mi municipio?</h3><p class="muted">Escriba el nombre de su municipio o alcaldía. Verá cuánto contrata, con quién, por qué modalidad y qué señales merecen preguntas.</p></div>
+          <div class="card"><span class="eyebrow">Periodismo e investigación</span><h3>Relaciones, anomalías, evidencia</h3><p class="muted">Perfiles de contratistas por NIT, redes entidad–proveedor–ordenador del gasto y enlaces a cada proceso en SECOP.</p></div>
+          <div class="card"><span class="eyebrow">Veedurías</span><h3>Expedientes y derechos de petición</h3><p class="muted">Descargue el expediente en Word, la tabla de contratos en Excel o CSV, y un derecho de petición con preguntas derivadas de los vacíos encontrados.</p></div>
+        </div>
+      </div>
+      <div class="section" id="modulos">
+        <div class="row" style="justify-content:space-between"><h2>Siete módulos, un buscador</h2><span class="muted" style="font-size:.875rem">El estado de cada módulo es real: "pendiente" significa que aún no hay datos conectados.</span></div>
+        <div class="modgrid">${modCards()}</div>
+      </div>`, false);
+  }
+
+  // ---------------------------------------------------------------- Búsqueda universal
+  function classify(raw, mode) {
+    const s = raw.trim();
+    if (/^CO1\.[A-Z]+\.\d+/i.test(s)) return 'contrato';
+    const d = s.replace(/[.\s]/g, '');
+    if (/^\d{5,12}(-\d)?$/.test(d)) return 'doc';
+    if (mode !== 'auto') return mode;
+    if (deptExact(s)) return 'depto';
+    if (sectorMatch(s)) return 'sector';
+    return 'texto';
+  }
+  function doSearch(raw) {
+    const q = raw.trim(); if (!q) return;
+    state.lastSearch = { q, mode: state.mode };
+    const kind = classify(q, state.mode);
+    if (kind === 'contrato') return openContract(q.toUpperCase());
+    if (kind === 'depto') { state.terrDept = deptExact(q).code; return navTo('m4'); }
+    if (kind === 'obra') { state.obraQ = q; return navTo('m5'); }
+    if (kind === 'sector') { state.sector = { ...(state.sector || {}), v: sectorMatch(q).v, q: '' }; return navTo('sector'); }
+    if (location.hash === '#resultados') renderResults(q, state.mode); else navTo('resultados');
+  }
+
+  async function renderResults(q, mode) {
+    const kind = classify(q, mode);
+    setView(`<div class="stack"><span class="eyebrow">Resultados para</span><h2>${esc(q)}</h2><p class="muted" id="kindline"></p><div id="res" class="grid2"><p class="loading">Consultando SECOP II…</p></div></div>`);
+    const res = $('#res');
+    if (kind === 'doc') {
+      const n = digits(q.split('-')[0]);
+      $('#kindline').textContent = 'Parece un NIT o número de documento. Se busca como entidad contratante y como contratista.';
+      const [ent, prov] = await Promise.all([
+        part('contratos', { select: 'nombre_entidad,nit_entidad,departamento,ciudad,count(*) as n,sum(valor_del_contrato) as v', where: `nit_entidad=${n}`, group: 'nombre_entidad,nit_entidad,departamento,ciudad', order: 'count(*) DESC', limit: 10 }),
+        part('contratos', { select: 'proveedor_adjudicado,documento_proveedor,tipodocproveedor,count(*) as n,sum(valor_del_contrato) as v', where: `starts_with(documento_proveedor, ${sqlStr(n)})`, group: 'proveedor_adjudicado,documento_proveedor,tipodocproveedor', order: 'sum(valor_del_contrato) DESC', limit: 20 }),
+      ]);
+      prov.rows = prov.rows.filter((r) => { const d = digits(r.documento_proveedor); return d === n || (d.length === n.length + 1 && d.startsWith(n)); });
+      res.innerHTML = entList(ent) + provList(prov);
+    } else {
+      const showEnt = mode === 'auto' || mode === 'entidad';
+      const showProv = mode === 'auto' || mode === 'proveedor';
+      $('#kindline').textContent = 'Búsqueda por nombre. Las tildes no importan; las palabras genéricas como "alcaldía" o "municipio" se usan solo si no hay otras.';
+      const jobs = [];
+      const we = likeAll('nombre_entidad', q); const wp = likeAll('proveedor_adjudicado', q); const wo = likeAll('objeto_del_contrato', q);
+      const ws = searchWords(q);
+      const refine = (r, field, n) => { if (r.ok) r.rows = r.rows.filter((x) => matchesAll(x[field], ws)).slice(0, n); return r; };
+      if (showEnt && we) jobs.push(textPart('contratos', { select: 'nombre_entidad,nit_entidad,departamento,ciudad,count(*) as n,sum(valor_del_contrato) as v', where: we, group: 'nombre_entidad,nit_entidad,departamento,ciudad', order: 'count(*) DESC', limit: 60 }, q).then((r) => ['ent', refine(r, 'nombre_entidad', 12)]));
+      if (showProv && wp) jobs.push(textPart('contratos', { select: 'proveedor_adjudicado,documento_proveedor,tipodocproveedor,count(*) as n,sum(valor_del_contrato) as v', where: wp, group: 'proveedor_adjudicado,documento_proveedor,tipodocproveedor', order: 'sum(valor_del_contrato) DESC', limit: 60 }, q).then((r) => ['prov', refine(r, 'proveedor_adjudicado', 12)]));
+      if (mode === 'auto' && wo) jobs.push(textPart('contratos', { select: 'id_contrato,nombre_entidad,proveedor_adjudicado,objeto_del_contrato,valor_del_contrato,fecha_de_firma,estado_contrato', where: `tipo_de_contrato='Obra' AND ${wo}`, order: 'valor_del_contrato DESC', limit: 40 }, q).then((r) => ['obra', refine(r, 'objeto_del_contrato', 8)]));
+      if (!jobs.length) { res.innerHTML = '<p class="muted">Escriba al menos una palabra con dos letras o más.</p>'; return; }
+      const out = Object.fromEntries(await Promise.all(jobs));
+      res.innerHTML = (out.ent ? entList(out.ent) : '') + (out.prov ? provList(out.prov) : '') + (out.obra ? obraList(out.obra) : '');
+    }
+    bindNav(res);
+  }
+  function entList(p) {
+    const rows = p.rows;
+    const body = !p.ok ? errBox(p) : !rows.length ? '<p class="muted">Ninguna entidad contratante coincide en SECOP II.</p>' :
+      `<div class="tablewrap"><table><thead><tr><th>Entidad</th><th class="r">Contratos</th><th class="r">Valor</th></tr></thead><tbody>${rows.map((r) => `<tr><td><button class="linkbtn" data-ent="${esc(r.nit_entidad)}" data-name="${esc(r.nombre_entidad)}">${esc(r.nombre_entidad)}</button><span class="sub">NIT ${esc(r.nit_entidad)} · ${esc(r.ciudad || '')}, ${esc(r.departamento || '')}</span></td><td class="r">${fmtN(r.n)}</td><td class="r" title="${fullCOP(r.v)}">${fmtCOP(r.v)}</td></tr>`).join('')}</tbody></table></div>`;
+    return `<div class="card"><div class="row" style="justify-content:space-between"><h3>Entidades públicas</h3><span class="badge live">en vivo</span></div>${body}${qlink(p)}</div>`;
+  }
+  function provList(p) {
+    const rows = p.rows;
+    const body = !p.ok ? errBox(p) : !rows.length ? '<p class="muted">Ningún contratista coincide en SECOP II.</p>' :
+      `<div class="tablewrap"><table><thead><tr><th>Contratista</th><th class="r">Contratos</th><th class="r">Valor</th></tr></thead><tbody>${rows.map((r) => `<tr><td><button class="linkbtn" data-prov="${esc(r.documento_proveedor)}" data-name="${esc(r.proveedor_adjudicado)}">${esc(r.proveedor_adjudicado)}</button><span class="sub">${esc(r.tipodocproveedor || 'Doc.')} ${esc(maskDoc(r.documento_proveedor, r.tipodocproveedor))}</span></td><td class="r">${fmtN(r.n)}</td><td class="r" title="${fullCOP(r.v)}">${fmtCOP(r.v)}</td></tr>`).join('')}</tbody></table></div>`;
+    return `<div class="card"><div class="row" style="justify-content:space-between"><h3>Contratistas</h3><span class="badge live">en vivo</span></div>${body}<p class="muted" style="font-size:.78rem">Un mismo nombre con documentos distintos son registros distintos: no se unen por coincidencia de nombre.</p>${qlink(p)}</div>`;
+  }
+  function obraList(p) {
+    const rows = p.rows;
+    const body = !p.ok ? errBox(p) : !rows.length ? '<p class="muted">Ningún contrato de obra menciona esas palabras.</p>' :
+      `<div class="tablewrap"><table><thead><tr><th>Obra</th><th class="r">Valor</th></tr></thead><tbody>${rows.map((r) => `<tr><td class="objeto"><button class="linkbtn" data-contract="${esc(r.id_contrato)}">${esc(String(r.objeto_del_contrato || '').slice(0, 140))}</button><span class="sub">${esc(r.nombre_entidad)} → ${esc(r.proveedor_adjudicado)} · ${fmtDate(r.fecha_de_firma)} · ${esc(r.estado_contrato)}</span></td><td class="r">${fmtCOP(r.valor_del_contrato)}</td></tr>`).join('')}</tbody></table></div>`;
+    return `<div class="card"><div class="row" style="justify-content:space-between"><h3>Contratos de obra que lo mencionan</h3><span class="badge live">en vivo</span></div>${body}${qlink(p)}</div>`;
+  }
+  function bindNav(root) {
+    root.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-ent],[data-prov],[data-contract]');
+      if (!b) return;
+      if (b.dataset.ent) openEntity(b.dataset.ent, b.dataset.name);
+      else if (b.dataset.prov) openProvider(b.dataset.prov, b.dataset.name);
+      else if (b.dataset.contract) openContract(b.dataset.contract);
+    });
+  }
+
+  // ---------------------------------------------------------------- Periodos
+  function periods() {
+    const list = [{ k: 'u3', l: `Últimos 3 años (${YEAR - 2}–${YEAR})`, from: `${YEAR - 2}-01-01`, to: isoDay(TODAY) }];
+    for (let y = YEAR; y >= YEAR - 5; y--) list.push({ k: String(y), l: String(y), from: `${y}-01-01`, to: y === YEAR ? isoDay(TODAY) : `${y}-12-31` });
+    list.push({ k: 'todo', l: 'Todo el histórico SECOP II', from: '2015-01-01', to: isoDay(TODAY) });
+    return list;
+  }
+  const periodSelect = (cur) => `<label class="field" style="max-width:260px"><span class="eyebrow">Periodo analizado</span><select id="period">${periods().map((p) => `<option value="${p.k}" ${p.k === cur ? 'selected' : ''}>${esc(p.l)}</option>`).join('')}</select></label>`;
+  const getPeriod = (k) => periods().find((p) => p.k === k) || periods()[0];
+
+  // ---------------------------------------------------------------- Ficha de entidad
+  const CONTRACT_FIELDS = 'id_contrato,referencia_del_contrato,nombre_entidad,nit_entidad,departamento,ciudad,proveedor_adjudicado,documento_proveedor,tipodocproveedor,objeto_del_contrato,tipo_de_contrato,modalidad_de_contratacion,justificacion_modalidad_de,estado_contrato,fecha_de_firma,fecha_de_inicio_del_contrato,fecha_de_fin_del_contrato,valor_del_contrato,valor_pagado,valor_facturado,dias_adicionados,codigo_de_categoria_principal,urlproceso,es_grupo,destino_gasto';
+
+  async function loadEntity(nit, pk) {
+    const P = getPeriod(pk);
+    const W = `nit_entidad=${nit}`;
+    const WP = `${W} AND ${periodWhere('fecha_de_firma', P)}`;
+    const jobs = {
+      info: part('contratos', { select: 'nombre_entidad,departamento,ciudad,orden,sector,codigo_entidad,count(*) as n', where: W, group: 'nombre_entidad,departamento,ciudad,orden,sector,codigo_entidad', order: 'count(*) DESC', limit: 5 }),
+      years: part('contratos', { select: 'date_extract_y(fecha_de_firma) as anio,count(*) as n,sum(valor_del_contrato) as v,sum(valor_pagado) as pagado', where: W, group: 'date_extract_y(fecha_de_firma)', order: 'date_extract_y(fecha_de_firma)', limit: 50 }),
+      months: part('contratos', { select: 'date_trunc_ym(fecha_de_firma) as mes,count(*) as n,sum(valor_del_contrato) as v', where: `${W} AND fecha_de_firma >= '2022-01-01T00:00:00'`, group: 'date_trunc_ym(fecha_de_firma)', order: 'date_trunc_ym(fecha_de_firma)', limit: 200 }),
+      modjust: part('contratos', { select: 'modalidad_de_contratacion as m,justificacion_modalidad_de as j,count(*) as n,sum(valor_del_contrato) as v', where: WP, group: 'modalidad_de_contratacion,justificacion_modalidad_de', limit: 500 }),
+      prov: part('contratos', { select: 'documento_proveedor as doc,proveedor_adjudicado as nom,tipodocproveedor as tipo,count(*) as n,sum(valor_del_contrato) as v', where: WP, group: 'documento_proveedor,proveedor_adjudicado,tipodocproveedor', order: 'sum(valor_del_contrato) DESC', limit: 5000 }),
+      recDirect: part('contratos', { select: 'documento_proveedor as doc,proveedor_adjudicado as nom,tipodocproveedor as tipo,count(*) as n,sum(valor_del_contrato) as v', where: `${WP} AND modalidad_de_contratacion='Contratación directa' AND upper(justificacion_modalidad_de) not like '%PROFESIONALES%'`, group: 'documento_proveedor,proveedor_adjudicado,tipodocproveedor', order: 'count(*) DESC', limit: 30 }),
+      list: part('contratos', { select: CONTRACT_FIELDS, where: WP, order: 'fecha_de_firma DESC', limit: 1000 }),
+      ordenadores: part('contratos', { select: 'nombre_ordenador_del_gasto as nom,count(*) as n,sum(valor_del_contrato) as v', where: `${WP} AND nombre_ordenador_del_gasto not in ('No definido','No Definido')`, group: 'nombre_ordenador_del_gasto', order: 'count(*) DESC', limit: 12 }),
+      vencidos: part('contratos', { select: 'id_contrato,objeto_del_contrato,proveedor_adjudicado,fecha_de_fin_del_contrato,valor_del_contrato,valor_pagado', where: `${W} AND estado_contrato='En ejecución' AND fecha_de_fin_del_contrato < '${daysAgo(90)}T00:00:00'`, order: 'fecha_de_fin_del_contrato ASC', limit: 200 }),
+      rezago: part('contratos', { select: 'id_contrato,objeto_del_contrato,proveedor_adjudicado,fecha_de_fin_del_contrato,valor_del_contrato,valor_pagado,estado_contrato', where: `${W} AND fecha_de_fin_del_contrato < '${daysAgo(180)}T00:00:00' AND valor_del_contrato >= 100000000 AND valor_pagado < valor_del_contrato * 0.5 AND estado_contrato not in ('Cancelado','terminado','Terminado','cedido')`, order: 'valor_del_contrato DESC', limit: 100 }),
+      garantias26: part('contratos', { select: 'justificacion_modalidad_de as j,count(*) as n,sum(valor_del_contrato) as v', where: `${W} AND modalidad_de_contratacion='Contratación directa' AND fecha_de_firma between '2026-01-31T00:00:00' and '2026-06-21T23:59:59'`, group: 'justificacion_modalidad_de', order: 'sum(valor_del_contrato) DESC', limit: 50 }),
+      garantias23: part('contratos', { select: 'id_contrato,objeto_del_contrato,proveedor_adjudicado,fecha_de_firma,valor_del_contrato,justificacion_modalidad_de', where: `${W} AND modalidad_de_contratacion='Contratación directa' AND upper(justificacion_modalidad_de) like '%INTERADMINISTRATIV%' AND fecha_de_firma between '2023-06-29T00:00:00' and '2023-10-29T23:59:59'`, order: 'valor_del_contrato DESC', limit: 100 }),
+      secop1: part('integrado', { select: 'origen,count(*) as n,sum(valor_contrato) as v', where: `starts_with(nit_de_la_entidad, ${sqlStr(nit)})`, group: 'origen', limit: 5 }),
+      multas1: part('multas1', { select: 'nombre_entidad,numero_de_resolucion,nombre_contratista,documento_contratista,numero_de_contrato,valor_sancion,fecha_de_firmeza,ruta_de_proceso', where: `starts_with(nit_entidad, ${sqlStr(nit)})`, order: 'fecha_de_firmeza DESC', limit: 100 }),
+    };
+    const keys = Object.keys(jobs);
+    const vals = await Promise.all(Object.values(jobs));
+    const D = Object.fromEntries(keys.map((k, i) => [k, vals[i]]));
+    // Sanciones SECOP II: requieren el código interno de la entidad
+    const cod = D.info.rows[0]?.codigo_entidad;
+    D.multas2 = cod && /^\d+$/.test(String(cod))
+      ? await part('multas2', { select: 'id_contrato,id_proceso,nombre_entidad_creadora,nombre_proveedor_objeto_de,valor,valor_pagado,fecha_evento,numero_de_acto,tipo_de_sancion,estado,tipo', where: `codigo_entidad_creadora=${cod}`, order: 'fecha_evento DESC', limit: 100 })
+      : { ok: false, rows: [], err: 'No se pudo identificar el código de la entidad en SECOP II.', ds: 'multas2' };
+    D.period = P; D.nit = nit;
+    return D;
+  }
+
+  function mergeProviders(rows) {
+    const m = new Map();
+    for (const r of rows) {
+      const key = (r.doc || '').trim() || 'SIN-DOC:' + r.nom;
+      const cur = m.get(key) || { doc: r.doc, tipo: r.tipo, names: new Map(), n: 0, v: 0 };
+      cur.n += num(r.n); cur.v += num(r.v);
+      cur.names.set(r.nom, (cur.names.get(r.nom) || 0) + num(r.n));
+      m.set(key, cur);
+    }
+    return [...m.values()].map((x) => ({ ...x, nom: [...x.names.entries()].sort((a, b) => b[1] - a[1])[0][0], variants: x.names.size })).sort((a, b) => b.v - a.v);
+  }
+
+  // ---------------------------------------------------------------- Motor de indicadores (explicable)
+  function indicatorsEntity(D) {
+    const P = D.period; const per = `${P.from} a ${P.to}`;
+    const ind = [];
+    const src = (...ps) => ps.filter(Boolean).map((p) => p.url);
+
+    // 1. Contratación directa
+    {
+      const p = D.modjust;
+      if (!p.ok || !p.rows.length) ind.push({ id: 'directa', t: 'Peso de la contratación directa', nivel: 'nd', detect: p.ok ? 'Sin contratos en el periodo.' : 'Fuente no disponible.', src: src(p) });
+      else {
+        const tot = sum(p.rows, 'v'); const totN = sum(p.rows, 'n');
+        const dir = p.rows.filter((r) => /directa/i.test(r.m || ''));
+        const dirV = sum(dir, 'v'); const dirN = sum(dir, 'n');
+        const sp = dir.filter((r) => /profesionales|apoyo a la gesti/i.test(r.j || ''));
+        const otroV = dirV - sum(sp, 'v');
+        const share = tot ? dirV / tot : 0; const shareOtro = tot ? otroV / tot : 0;
+        const nivel = shareOtro >= 0.5 ? 'alta' : shareOtro >= 0.3 || share >= 0.7 ? 'media' : 'sin';
+        ind.push({
+          id: 'directa', t: 'Peso de la contratación directa', nivel,
+          detect: `La contratación directa suma ${fmtPct(share)} del valor contratado (${fmtN(dirN)} de ${fmtN(totN)} contratos). Sin contar servicios profesionales y de apoyo a la gestión, la directa es ${fmtPct(shareOtro)} del valor.`,
+          datos: `Contratos de SECOP II de la entidad firmados entre ${per}, agrupados por modalidad y justificación.`,
+          calc: `Directa / total = ${fullCOP(dirV)} / ${fullCOP(tot)}. Directa sin servicios profesionales = ${fullCOP(otroV)} / ${fullCOP(tot)}. Umbrales: alerta media si la directa sin servicios profesionales ≥ 30 % o la directa total ≥ 70 %; alta si la primera ≥ 50 %.`,
+          lim: 'La contratación directa es legal en las causales del art. 2 num. 4 de la Ley 1150 de 2007. Los convenios interadministrativos, la urgencia manifiesta y el régimen especial pueden explicar valores altos.',
+          confirmar: 'Revisar los actos de justificación de la contratación directa y los estudios previos de los contratos de mayor valor.',
+          preguntas: ['Remitir copia de los actos administrativos de justificación de la contratación directa suscritos en el periodo ' + per + ', indicando la causal legal invocada en cada caso.'],
+          src: src(p),
+        });
+      }
+    }
+    // 2. Concentración de proveedores
+    {
+      const p = D.prov;
+      if (!p.ok || !p.rows.length) ind.push({ id: 'concentracion', t: 'Concentración en pocos contratistas', nivel: 'nd', detect: p.ok ? 'Sin contratos en el periodo.' : 'Fuente no disponible.', src: src(p) });
+      else {
+        const provs = mergeProviders(p.rows); const tot = sum(provs, 'v');
+        const shares = provs.map((x) => (tot ? x.v / tot : 0));
+        const hhi = shares.reduce((a, s) => a + (s * 100) ** 2, 0);
+        const top1 = shares[0] || 0; const top5 = shares.slice(0, 5).reduce((a, b) => a + b, 0);
+        const nivel = top1 >= 0.35 || hhi >= 2500 ? 'alta' : top1 >= 0.2 || hhi >= 1500 ? 'media' : 'sin';
+        ind.push({
+          id: 'concentracion', t: 'Concentración en pocos contratistas', nivel,
+          detect: `El primer contratista (${provs[0].nom}) recibe ${fmtPct(top1)} del valor; los cinco primeros, ${fmtPct(top5)}. Índice Herfindahl-Hirschman (HHI): ${nf0.format(hhi)} sobre 10.000, con ${fmtN(provs.length)} contratistas distintos.`,
+          datos: `Valor contratado por documento de contratista, ${per}.`,
+          calc: 'Participación = valor del contratista / valor total. HHI = suma de los cuadrados de las participaciones en puntos porcentuales. Umbrales de referencia: 1.500 (moderada) y 2.500 (alta). Alerta alta también si un solo contratista supera 35 %.',
+          lim: 'Un contrato grande y legítimo (por ejemplo, una obra de infraestructura adjudicada por licitación) concentra el valor por sí solo. Consorcios y uniones temporales cuentan como un contratista distinto de sus integrantes.',
+          confirmar: 'Revisar cuántos oferentes participaron en los procesos de los primeros cinco contratistas (dataset de procesos de SECOP II).',
+          preguntas: [`Informar el número de oferentes que se presentaron en cada proceso adjudicado a ${provs.slice(0, 3).map((x) => x.nom).join(', ')} durante ${per}.`],
+          src: src(p), extra: { provs, tot, hhi },
+        });
+      }
+    }
+    // 3. Contratistas recurrentes por contratación directa (sin servicios profesionales)
+    {
+      const p = D.recDirect;
+      if (!p.ok) ind.push({ id: 'recurrentes', t: 'Contratistas recurrentes por contratación directa', nivel: 'nd', detect: 'Fuente no disponible.', src: src(p) });
+      else {
+        const rec = mergeProviders(p.rows).filter((x) => x.n >= 5);
+        const comp = rec.filter((x) => isCompanyDoc(x.tipo));
+        const nivel = comp.some((x) => x.n >= 10) ? 'alta' : comp.length ? 'media' : 'sin';
+        ind.push({
+          id: 'recurrentes', t: 'Contratistas recurrentes por contratación directa', nivel,
+          detect: rec.length ? `${rec.length} contratista(s) recibieron 5 o más contratos directos que no son de servicios profesionales: ${rec.slice(0, 5).map((x) => `${x.nom} (${x.n})`).join('; ')}.` : 'Ningún contratista recibió 5 o más contratos directos distintos de servicios profesionales.',
+          datos: `Contratos por contratación directa cuya justificación no menciona servicios profesionales, ${per}.`,
+          calc: 'Conteo de contratos por documento de contratista. Alerta media con al menos una empresa (NIT) con 5 o más; alta con 10 o más.',
+          lim: 'Convenios con entidades públicas, proveedores exclusivos y arrendamientos se contratan legalmente de forma directa y de modo repetido.',
+          confirmar: 'Verificar la causal invocada en cada contrato y si existía pluralidad de oferentes.',
+          preguntas: rec.length ? [`Explicar la causal legal de contratación directa aplicada a los contratos celebrados con ${rec.slice(0, 3).map((x) => x.nom).join(', ')}.`] : [],
+          src: src(p), extra: { rec },
+        });
+      }
+    }
+    // 4. Posible fragmentación
+    {
+      const p = D.list;
+      if (!p.ok || !p.rows.length) ind.push({ id: 'fragmentacion', t: 'Posible fragmentación de contratos', nivel: 'nd', detect: p.ok ? 'Sin contratos en el periodo.' : 'Fuente no disponible.', src: src(p) });
+      else {
+        const groups = fragmentation(p.rows);
+        const nivel = groups.some((g) => g.items.length >= 5) ? 'alta' : groups.length ? 'media' : 'sin';
+        ind.push({
+          id: 'fragmentacion', t: 'Posible fragmentación de contratos', nivel,
+          detect: groups.length ? `${groups.length} grupo(s) de 3 o más contratos de mínima cuantía o directos con el mismo contratista, la misma clase de bien o servicio y firmados en menos de 90 días. Mayor grupo: ${groups[0].nom}, ${groups[0].items.length} contratos por ${fmtCOP(groups[0].total)}.` : 'No se encontraron grupos de contratos menores repetidos con el mismo contratista y objeto en ventanas de 90 días.',
+          datos: `Hasta 1.000 contratos más recientes del periodo ${per}${p.rows.length >= 1000 ? ' (el periodo tiene más; el análisis cubre solo los 1.000 más recientes)' : ''}.`,
+          calc: 'Se agrupan contratos por documento del contratista y clase UNSPSC (código de categoría principal sin el último par de dígitos). Se marca el grupo si hay 3 o más contratos de mínima cuantía o contratación directa (sin servicios profesionales) en una ventana móvil de 90 días.',
+          lim: 'Compras recurrentes planeadas (por ejemplo, suministros mensuales) generan el mismo patrón. La fragmentación solo se configura si se eludió la modalidad que correspondía por el valor total.',
+          confirmar: 'Comparar con el Plan Anual de Adquisiciones: si la necesidad era conocida y su valor conjunto exigía otra modalidad.',
+          preguntas: groups.length ? [`Explicar por qué los contratos ${groups[0].items.slice(0, 5).map((x) => x.id_contrato).join(', ')} se celebraron por separado y no en un solo proceso, y remitir el Plan Anual de Adquisiciones vigente.`] : [],
+          src: src(p), extra: { groups },
+        });
+      }
+    }
+    // 5. Contratación al cierre de administración
+    {
+      const p = D.months;
+      if (!p.ok) ind.push({ id: 'cierre', t: 'Aceleración al cierre de un gobierno', nivel: 'nd', detect: 'Fuente no disponible.', src: src(p) });
+      else {
+        const byM = Object.fromEntries(p.rows.map((r) => [String(r.mes).slice(0, 7), num(r.v)]));
+        const avg = (ms) => ms.reduce((a, m) => a + (byM[m] || 0), 0) / ms.length;
+        const ym = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
+        const terrBase = avg([1, 2, 3, 4, 5, 6, 7, 8, 9].map((m) => ym(2023, m)));
+        const terrEnd = avg([10, 11, 12].map((m) => ym(2023, m)));
+        const natBase = avg([8, 9, 10, 11, 12].map((m) => ym(2025, m)).concat([1, 2, 3, 4].map((m) => ym(2026, m))));
+        const natEnd = avg([5, 6, 7].map((m) => ym(2026, m)));
+        const rT = terrBase ? terrEnd / terrBase : null; const rN = natBase ? natEnd / natBase : null;
+        const worst = Math.max(rT || 0, rN || 0);
+        const nivel = worst >= 3 ? 'alta' : worst >= 2 ? 'media' : 'sin';
+        ind.push({
+          id: 'cierre', t: 'Aceleración al cierre de un gobierno', nivel,
+          detect: `Cierre de gobiernos territoriales (oct–dic 2023): promedio mensual ${fmtCOP(terrEnd)} frente a ${fmtCOP(terrBase)} en ene–sep 2023 (${rT ? nf1.format(rT) + ' veces' : 'sin base de comparación'}). Cierre del gobierno nacional (may–jul 2026): ${fmtCOP(natEnd)} frente a ${fmtCOP(natBase)} en ago 2025–abr 2026 (${rN ? nf1.format(rN) + ' veces' : 'sin base de comparación'}).`,
+          datos: 'Valor firmado por mes en SECOP II desde enero de 2022 (independiente del periodo elegido).',
+          calc: 'Razón = promedio mensual en los últimos meses del gobierno / promedio mensual de los meses anteriores. Alerta media desde 2 veces, alta desde 3 veces. Aplique la ventana que corresponda a la entidad (territorial o nacional).',
+          lim: 'Diciembre concentra contratación por cierre de vigencia en casi todas las entidades. Una entidad nacional no cambia de gobierno en 2023, ni una territorial en 2026.',
+          confirmar: 'Revisar si los contratos del cierre comprometen vigencias futuras y si se firmaron después de la elección del sucesor.',
+          preguntas: ['Relacionar los contratos firmados en los últimos tres meses de la administración saliente, indicando si comprometieron vigencias futuras.'],
+          src: src(p), extra: { byM },
+        });
+      }
+    }
+    // 6. Ventanas de Ley de Garantías
+    {
+      const a = D.garantias26; const b = D.garantias23;
+      if (!a.ok && !b.ok) ind.push({ id: 'garantias', t: 'Contratación en ventanas electorales', nivel: 'nd', detect: 'Fuente no disponible.', src: src(a, b) });
+      else {
+        const v26 = sum(a.rows, 'v'); const n26 = sum(a.rows, 'n');
+        const n23 = b.rows.length; const v23 = sum(b.rows, 'valor_del_contrato');
+        const nivel = (n23 > 0 || n26 > 0) ? 'media' : 'sin';
+        ind.push({
+          id: 'garantias', t: 'Contratación en ventanas electorales', nivel,
+          detect: `Entre el 31 de enero y el 21 de junio de 2026 (antesala de la elección presidencial) la entidad firmó ${fmtN(n26)} contratos directos por ${fmtCOP(v26)}. Entre el 29 de junio y el 29 de octubre de 2023 (antesala de elecciones territoriales) firmó ${fmtN(n23)} contratos directos con justificación interadministrativa por ${fmtCOP(v23)}.`,
+          datos: 'Contratos por contratación directa firmados en las dos ventanas, con su justificación.',
+          calc: 'Conteo y suma directa por ventana. Se marca alerta media si hay contratos en alguna ventana: es un punto de revisión, no un hallazgo.',
+          lim: 'La Ley 996 de 2005 (arts. 32, 33 y 38) restringe la contratación directa y los convenios interadministrativos antes de elecciones, pero tiene excepciones (defensa, salud, emergencias, crédito, entre otras). Contratos firmados en la ventana pueden estar dentro de esas excepciones.',
+          confirmar: 'Verificar, contrato por contrato, la excepción legal invocada.',
+          preguntas: (n23 + n26) ? ['Indicar, para cada contrato directo o convenio interadministrativo firmado en periodo de restricción de la Ley 996 de 2005, la excepción legal que lo habilitaba.'] : [],
+          src: src(a, b), extra: { j26: a.rows, l23: b.rows },
+        });
+      }
+    }
+    // 7. Contratos vencidos que siguen "en ejecución"
+    {
+      const p = D.vencidos;
+      if (!p.ok) ind.push({ id: 'vencidos', t: 'Contratos vencidos que figuran en ejecución', nivel: 'nd', detect: 'Fuente no disponible.', src: src(p) });
+      else {
+        const n = p.rows.length; const v = sum(p.rows, 'valor_del_contrato');
+        const nivel = n >= 20 ? 'alta' : n >= 3 ? 'media' : 'sin';
+        ind.push({
+          id: 'vencidos', t: 'Contratos vencidos que figuran en ejecución', nivel,
+          detect: `${n >= 200 ? 'Al menos 200' : fmtN(n)} contrato(s) por ${fmtCOP(v)} aparecen "En ejecución" aunque su fecha de terminación pasó hace más de 90 días.`,
+          datos: 'Todos los contratos de la entidad en SECOP II (no depende del periodo).',
+          calc: `estado_contrato = "En ejecución" y fecha_de_fin_del_contrato anterior a ${daysAgo(90)}. Alerta media desde 3, alta desde 20.`,
+          lim: 'Con frecuencia es un rezago en la actualización de SECOP II, no un problema de ejecución. Aun así, la falta de liquidación o actualización limita el control ciudadano.',
+          confirmar: 'Pedir el estado real (liquidado, prorrogado, suspendido) y las actas correspondientes.',
+          preguntas: n ? [`Informar el estado real y remitir actas de liquidación, prórroga o suspensión de los contratos ${p.rows.slice(0, 5).map((r) => r.id_contrato).join(', ')}, que figuran en ejecución con plazo vencido.`] : [],
+          src: src(p), extra: { rows: p.rows },
+        });
+      }
+    }
+    // 8. Pagos rezagados
+    {
+      const p = D.rezago;
+      if (!p.ok) ind.push({ id: 'rezago', t: 'Contratos terminados con poco pago registrado', nivel: 'nd', detect: 'Fuente no disponible.', src: src(p) });
+      else {
+        const n = p.rows.length;
+        const nivel = n >= 10 ? 'alta' : n >= 2 ? 'media' : 'sin';
+        ind.push({
+          id: 'rezago', t: 'Contratos terminados con poco pago registrado', nivel,
+          detect: n ? `${fmtN(n)} contrato(s) de 100 millones o más, vencidos hace más de 180 días, registran pagos inferiores a la mitad de su valor. Mayor: ${p.rows[0].id_contrato}, ${fmtCOP(p.rows[0].valor_del_contrato)} con ${fmtCOP(p.rows[0].valor_pagado)} pagados.` : 'Ningún contrato grande vencido registra pagos inferiores a la mitad de su valor.',
+          datos: 'Todos los contratos de la entidad en SECOP II con valor ≥ $100 millones.',
+          calc: `fecha_de_fin_del_contrato < ${daysAgo(180)}, valor_pagado < 50 % del valor_del_contrato, estado distinto de cancelado o terminado.`,
+          lim: 'SECOP II no siempre registra los pagos hechos por fuera de la plataforma (SIIF u otros sistemas). Puede indicar obras inconclusas, liquidaciones pendientes o solo subregistro.',
+          confirmar: 'Cruzar con las órdenes de pago del sistema financiero de la entidad y las actas de recibo.',
+          preguntas: n ? [`Remitir certificación de pagos efectuados y acta de recibo final de los contratos ${p.rows.slice(0, 5).map((r) => r.id_contrato).join(', ')}.`] : [],
+          src: src(p), extra: { rows: p.rows },
+        });
+      }
+    }
+    // 9. Adiciones en tiempo
+    {
+      const p = D.list;
+      if (!p.ok || !p.rows.length) ind.push({ id: 'adiciones', t: 'Prórrogas (días adicionados)', nivel: 'nd', detect: p.ok ? 'Sin contratos en el periodo.' : 'Fuente no disponible.', src: src(p) });
+      else {
+        const withAdd = p.rows.filter((r) => num(r.dias_adicionados) > 0);
+        const big = withAdd.filter((r) => num(r.dias_adicionados) >= 180).sort((a, b) => num(b.dias_adicionados) - num(a.dias_adicionados));
+        const share = withAdd.length / p.rows.length;
+        const nivel = big.length >= 5 ? 'alta' : big.length || share >= 0.15 ? 'media' : 'sin';
+        ind.push({
+          id: 'adiciones', t: 'Prórrogas (días adicionados)', nivel,
+          detect: `${fmtN(withAdd.length)} de ${fmtN(p.rows.length)} contratos (${fmtPct(share)}) registran días adicionados; ${fmtN(big.length)} superan 180 días${big[0] ? `, el mayor ${fmtN(big[0].dias_adicionados)} días (${big[0].id_contrato})` : ''}.`,
+          datos: `Hasta 1.000 contratos más recientes del periodo ${per}.`,
+          calc: 'Campo dias_adicionados de SECOP II. Alerta media si 15 % o más de los contratos tiene prórroga o algún contrato supera 180 días; alta con 5 o más contratos sobre 180 días.',
+          lim: 'SECOP II no publica en este conjunto el valor de las adiciones en dinero; solo los días. Las prórrogas pueden estar justificadas por causas ajenas al contratista.',
+          confirmar: 'Pedir los otrosíes, sus justificaciones técnicas y los conceptos de interventoría o supervisión.',
+          preguntas: big.length ? [`Remitir los otrosíes de prórroga y su justificación técnica para los contratos ${big.slice(0, 5).map((r) => r.id_contrato).join(', ')}.`] : [],
+          src: src(p), extra: { big },
+        });
+      }
+    }
+    return ind;
+  }
+
+  function fragmentation(rows) {
+    const elig = rows.filter((r) => /m[ií]nima cuant/i.test(r.modalidad_de_contratacion || '') || (/directa/i.test(r.modalidad_de_contratacion || '') && !/profesionales|apoyo a la gesti/i.test(r.justificacion_modalidad_de || '')));
+    const by = new Map();
+    for (const r of elig) {
+      const cls = String(r.codigo_de_categoria_principal || '').replace(/^V1\./, '').slice(0, 6);
+      if (!r.documento_proveedor || !cls) continue;
+      const k = r.documento_proveedor + '|' + cls;
+      if (!by.has(k)) by.set(k, []);
+      by.get(k).push(r);
+    }
+    const out = [];
+    for (const [k, items] of by) {
+      if (items.length < 3) continue;
+      items.sort((a, b) => String(a.fecha_de_firma).localeCompare(String(b.fecha_de_firma)));
+      let best = [];
+      for (let i = 0; i < items.length; i++) {
+        const t0 = new Date(items[i].fecha_de_firma);
+        const win = items.filter((x, j) => j >= i && (new Date(x.fecha_de_firma) - t0) / 864e5 <= 90);
+        if (win.length > best.length) best = win;
+      }
+      if (best.length >= 3) out.push({ key: k, nom: best[0].proveedor_adjudicado, cls: k.split('|')[1], items: best, total: sum(best, 'valor_del_contrato') });
+    }
+    return out.sort((a, b) => b.items.length - a.items.length || b.total - a.total);
+  }
+
+  // ---------------------------------------------------------------- Render ficha entidad
+  function openEntity(nit, name) {
+    nit = digits(nit);
+    const ctx = { kind: 'entidad', nit, name, pk: 'u3', tab: 'resumen', D: null };
+    ctx.render = () => renderEntity(ctx);
+    state.current = ctx;
+    navTo('ficha');
+  }
+  async function renderEntity(ctx) {
+    setView(`<div class="stack"><div class="profile-head"><span class="eyebrow">Entidad pública · NIT ${esc(ctx.nit)}</span><h2>${esc(ctx.name || 'Entidad ' + ctx.nit)}</h2><div class="idline" id="idline"></div></div>
+      <div class="row" style="justify-content:space-between;align-items:flex-end">${periodSelect(ctx.pk)}<div class="row" id="exportbar"></div></div>
+      <div class="tabs" role="tablist" id="tabs"></div><div id="tabbody" class="stack"><p class="loading">Consultando 15 consultas de datos en SECOP… puede tardar unos segundos.</p></div></div>`);
+    $('#period').addEventListener('change', (e) => { ctx.pk = e.target.value; ctx.D = null; renderEntity(ctx); });
+    if (!ctx.D) ctx.D = await loadEntity(ctx.nit, ctx.pk);
+    if (state.current !== ctx) return;
+    const D = ctx.D;
+    const info = D.info.rows[0];
+    if (info && !ctx.name) { ctx.name = info.nombre_entidad; $('.profile-head h2').textContent = info.nombre_entidad; }
+    $('#idline').innerHTML = info ? `<span>${esc(info.ciudad)}, ${esc(info.departamento)}</span><span>Orden: ${esc(info.orden)}</span><span>Sector: ${sectorOf(info.sector) ? `<button class="linkbtn" data-sector="${esc(sectorOf(info.sector).v)}">${esc(sectorOf(info.sector).l)}</button>` : esc(info.sector)}</span>${D.info.rows.length > 1 ? `<span title="La entidad aparece con más de un nombre o ubicación en SECOP II">${D.info.rows.length} variantes de registro</span>` : ''}` : (D.info.ok ? '<span>Sin contratos en SECOP II con este NIT.</span>' : errBox(D.info));
+    $('#idline').onclick = (e) => { const b = e.target.closest('[data-sector]'); if (b) { state.sector = { ...(state.sector || {}), v: b.dataset.sector, q: '' }; navTo('sector'); } };
+    ctx.ind = indicatorsEntity(D);
+    const nAlert = ctx.ind.filter((i) => i.nivel === 'alta' || i.nivel === 'media').length;
+    const tabs = [['resumen', 'Resumen'], ['alertas', 'Alertas', nAlert], ['proveedores', 'Contratistas'], ['red', 'Red'], ['contratos', 'Contratos'], ['sanciones', 'Sanciones'], ['expediente', 'Expediente']];
+    $('#tabs').innerHTML = tabs.map(([k, l, c]) => `<button role="tab" data-tab="${k}" aria-selected="${ctx.tab === k}">${l}${c ? `<span class="cnt">${c}</span>` : ''}</button>`).join('');
+    $('#tabs').onclick = (e) => { const b = e.target.closest('[data-tab]'); if (!b) return; ctx.tab = b.dataset.tab; $$('#tabs button').forEach((x) => x.setAttribute('aria-selected', x === b)); drawEntityTab(ctx); };
+    $('#exportbar').innerHTML = `<button class="btn" id="xcsv">CSV</button><button class="btn" id="xxlsx">Excel</button><button class="btn lime" id="xdoc">Expediente Word</button>`;
+    $('#xcsv').onclick = () => exportCSV(D.list.rows, `contratos_${ctx.nit}_${D.period.k}.csv`);
+    $('#xxlsx').onclick = () => exportXLSX(ctx);
+    $('#xdoc').onclick = () => exportExpediente(ctx);
+    drawEntityTab(ctx);
+  }
+
+  function drawEntityTab(ctx) {
+    const D = ctx.D; const body = $('#tabbody'); const P = D.period;
+    if (ctx.tab === 'resumen') {
+      const yrs = D.years.rows.filter((r) => r.anio);
+      const inP = D.prov.ok ? mergeProviders(D.prov.rows) : [];
+      const totP = sum(inP, 'v'); const nP = sum(inP, 'n');
+      const s1 = D.secop1.rows.find((r) => r.origen === 'SECOPI');
+      body.innerHTML = `
+        <div class="kpis">
+          <div class="kpi"><span class="l">Contratos en el periodo</span><span class="v">${fmtN(nP)}</span></div>
+          <div class="kpi"><span class="l">Valor contratado</span><span class="v" title="${fullCOP(totP)}">${fmtCOP(totP)}</span></div>
+          <div class="kpi"><span class="l">Contratistas distintos</span><span class="v">${fmtN(inP.length)}</span></div>
+          <div class="kpi"><span class="l">Indicadores con señal</span><span class="v">${ctx.ind.filter((i) => i.nivel === 'alta' || i.nivel === 'media').length} de 9</span></div>
+        </div>
+        <div class="grid2">
+          <div class="card"><h3>Contratación por año (SECOP II)</h3>${D.years.ok ? yearChart(yrs) : errBox(D.years)}<p class="muted" style="font-size:.78rem">Barra: valor contratado. Marca lima: valor pagado registrado en SECOP II. Las cifras son valores de contratos, no ejecución presupuestal.</p>${qlink(D.years)}</div>
+          <div class="card"><h3>Modalidades en el periodo</h3>${D.modjust.ok ? modBars(D.modjust.rows) : errBox(D.modjust)}${qlink(D.modjust)}</div>
+        </div>
+        <div class="grid2">
+          <div class="card"><h3>Señales a revisar</h3>${alertMini(ctx.ind)}<button class="btn" data-goto="alertas">Ver cálculos y fuentes</button></div>
+          <div class="card"><h3>Cobertura de las fuentes</h3><div class="facts">
+            <div><span>SECOP II · contratos electrónicos</span><span>${fmtN(sum(yrs, 'n'))} contratos en todo el histórico</span></div>
+            <div><span>SECOP I (vía SECOP Integrado)</span><span>${D.secop1.ok ? (s1 ? `${fmtN(s1.n)} contratos · ${fmtCOP(s1.v)}` : 'Sin registros con este NIT') : 'Fuente no disponible'}</span></div>
+            <div><span>Periodo analizado</span><span>${esc(P.from)} a ${esc(P.to)}</span></div>
+            <div><span>Última actualización de SECOP II</span><span>${state.meta.contratos?.updated ? isoDay(state.meta.contratos.updated) : 'no verificada'}</span></div>
+          </div><p class="muted" style="font-size:.78rem">SECOP I se reporta aparte: sus contratos no entran en los indicadores porque el conjunto integrado no trae modalidad ni pagos comparables.</p>${qlink(D.secop1)}</div>
+        </div>`;
+      body.querySelector('[data-goto]').onclick = () => $('#tabs [data-tab="alertas"]').click();
+    } else if (ctx.tab === 'alertas') {
+      body.innerHTML = `<div class="notice info"><b>Cómo leer esto</b><span>Cada indicador muestra qué se detectó, con qué datos, cómo se calculó y qué lo podría explicar. Una alerta es una razón para preguntar, no una conclusión. Los umbrales están en <a href="#metodologia">Metodología</a>.</span></div>` + ctx.ind.map(alertCard).join('');
+      bindNav(body);
+    } else if (ctx.tab === 'proveedores') {
+      const provs = D.prov.ok ? mergeProviders(D.prov.rows) : []; const tot = sum(provs, 'v');
+      body.innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h3>Contratistas por valor recibido</h3><span class="muted" style="font-size:.85rem">${esc(P.from)} a ${esc(P.to)}</span></div>
+        ${!D.prov.ok ? errBox(D.prov) : `<div class="tablewrap"><table><thead><tr><th>#</th><th>Contratista</th><th class="r">Contratos</th><th class="r">Valor</th><th class="r">Participación</th></tr></thead><tbody>${provs.slice(0, 60).map((x, i) => `<tr><td class="num">${i + 1}</td><td><button class="linkbtn" data-prov="${esc(x.doc)}" data-name="${esc(x.nom)}">${esc(x.nom)}</button><span class="sub">${esc(x.tipo || '')} ${esc(maskDoc(x.doc, x.tipo))}${x.variants > 1 ? ` · ${x.variants} variantes del nombre` : ''}</span></td><td class="r">${fmtN(x.n)}</td><td class="r" title="${fullCOP(x.v)}">${fmtCOP(x.v)}</td><td class="r">${fmtPct(tot ? x.v / tot : 0)}</td></tr>`).join('')}</tbody></table></div>${provs.length > 60 ? `<p class="muted">Se muestran 60 de ${fmtN(provs.length)}. La tabla completa está en la exportación a Excel.</p>` : ''}`}
+        ${qlink(D.prov)}</div>`;
+      bindNav(body);
+    } else if (ctx.tab === 'red') {
+      body.innerHTML = `<div class="card"><h3>Red documentada: entidad, contratistas y ordenadores del gasto</h3><div class="legend3"><span class="h">Relación documentada en SECOP II</span></div><div id="cy"></div><p class="muted" style="font-size:.85rem">Las líneas representan contratos registrados (entidad → contratista) o firmas como ordenador del gasto registradas en SECOP II. No representan parentesco, afinidad política ni relaciones societarias, que no están en estas fuentes. Toque un contratista para abrir su perfil.</p>${qlink(D.prov)}${qlink(D.ordenadores)}</div>`;
+      drawEntityGraph(ctx);
+    } else if (ctx.tab === 'contratos') {
+      body.innerHTML = `<div class="card"><h3>Contratos del periodo</h3>${D.list.ok ? '' : errBox(D.list)}<div id="ctable"></div>${qlink(D.list)}</div>`;
+      if (D.list.ok) contractTable($('#ctable'), D.list.rows);
+    } else if (ctx.tab === 'sanciones') {
+      body.innerHTML = `<div class="notice info"><b>Distinga estados</b><span>Las multas y sanciones de SECOP son actos contractuales de la entidad contra un contratista (caducidad, multas, cláusula penal, incumplimiento). En SECOP II varias aparecen en estado "A la espera de aprobación": no son decisiones en firme. Antecedentes disciplinarios, fiscales y penales no están conectados (ver módulo 07).</span></div>
+        <div class="card"><h3>SECOP II · multas y sanciones registradas por la entidad</h3>${sancionesTable2(D.multas2)}${qlink(D.multas2)}</div>
+        <div class="card"><h3>SECOP I · multas y sanciones (histórico)</h3>${sancionesTable1(D.multas1)}${qlink(D.multas1)}</div>`;
+    } else if (ctx.tab === 'expediente') {
+      body.innerHTML = expedientePanel(ctx);
+      bindExpediente(ctx);
+    }
+  }
+
+  function alertMini(ind) {
+    return `<div class="stack" style="gap:6px">${ind.map((i) => `<div class="row" style="justify-content:space-between;gap:8px"><span>${esc(i.t)}</span>${levelBadge(i.nivel)}</div>`).join('')}</div>`;
+  }
+  function levelBadge(n) {
+    const map = { alta: ['alta', 'Señal alta'], media: ['media', 'Señal media'], sin: ['sin', 'Sin señal'], nd: ['nd', 'Sin datos'] };
+    const [c, l] = map[n] || map.nd; return `<span class="badge ${c}">${l}</span>`;
+  }
+  function alertCard(i) {
+    const extraList = (() => {
+      if (i.id === 'fragmentacion' && i.extra?.groups?.length) return `<dt>Grupos</dt><dd>${i.extra.groups.slice(0, 5).map((g) => `<div><b>${esc(g.nom)}</b> · clase ${esc(g.cls)} · ${g.items.length} contratos · ${fmtCOP(g.total)}<br>${g.items.map((x) => `<button class="linkbtn mono" data-contract="${esc(x.id_contrato)}">${esc(x.id_contrato)}</button> ${fmtDate(x.fecha_de_firma)} ${fmtCOP(x.valor_del_contrato)}`).join(' · ')}</div>`).join('')}</dd>`;
+      if ((i.id === 'vencidos' || i.id === 'rezago') && i.extra?.rows?.length) return `<dt>Ejemplos</dt><dd>${i.extra.rows.slice(0, 8).map((r) => `<div><button class="linkbtn mono" data-contract="${esc(r.id_contrato)}">${esc(r.id_contrato)}</button> · fin ${fmtDate(r.fecha_de_fin_del_contrato)} · ${fmtCOP(r.valor_del_contrato)} (pagado ${fmtCOP(r.valor_pagado)}) · ${esc(String(r.proveedor_adjudicado || ''))}</div>`).join('')}</dd>`;
+      if (i.id === 'adiciones' && i.extra?.big?.length) return `<dt>Mayores prórrogas</dt><dd>${i.extra.big.slice(0, 8).map((r) => `<div><button class="linkbtn mono" data-contract="${esc(r.id_contrato)}">${esc(r.id_contrato)}</button> · ${fmtN(r.dias_adicionados)} días · ${esc(r.proveedor_adjudicado)}</div>`).join('')}</dd>`;
+      if (i.id === 'garantias' && i.extra?.l23?.length) return `<dt>Convenios 2023</dt><dd>${i.extra.l23.slice(0, 8).map((r) => `<div><button class="linkbtn mono" data-contract="${esc(r.id_contrato)}">${esc(r.id_contrato)}</button> · ${fmtDate(r.fecha_de_firma)} · ${fmtCOP(r.valor_del_contrato)} · ${esc(r.proveedor_adjudicado)}</div>`).join('')}</dd>`;
+      if (i.id === 'cierre' && i.extra?.byM) return `<dt>Serie mensual</dt><dd>${monthChart(i.extra.byM)}</dd>`;
+      if (i.id === 'recurrentes' && i.extra?.rec?.length) return `<dt>Contratistas</dt><dd>${i.extra.rec.slice(0, 10).map((x) => `<div><button class="linkbtn" data-prov="${esc(x.doc)}" data-name="${esc(x.nom)}">${esc(x.nom)}</button> · ${x.n} contratos · ${fmtCOP(x.v)}</div>`).join('')}</dd>`;
+      return '';
+    })();
+    return `<details class="alert ${i.nivel}" ${i.nivel === 'alta' ? 'open' : ''}><summary><h3>${esc(i.t)}</h3>${levelBadge(i.nivel)}</summary>
+      <p>${esc(i.detect)}</p>
+      ${i.calc ? `<dl><dt>Datos</dt><dd>${esc(i.datos)}</dd><dt>Cálculo</dt><dd>${esc(i.calc)}</dd><dt>Limitaciones</dt><dd>${esc(i.lim)}</dd><dt>Para confirmar</dt><dd>${esc(i.confirmar)}</dd>${extraList}<dt>Fuente</dt><dd>${i.src.map((u) => `<a class="qlink" href="${esc(u)}" target="_blank" rel="noopener">${esc(u.length > 90 ? u.slice(0, 90) + '…' : u)}</a>`).join('<br>')}</dd></dl>` : `<p class="qlink">${i.src.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener">consulta ↗</a>`).join(' ')}</p>`}
+    </details>`;
+  }
+
+  // ---------------------------------------------------------------- Gráficos (SVG a escala)
+  function yearChart(rows) {
+    if (!rows.length) return '<p class="muted">Sin datos.</p>';
+    const W = 560, H = 220, pl = 8, pr = 8, pt = 22, pb = 26;
+    const max = Math.max(...rows.map((r) => num(r.v))) || 1;
+    const bw = (W - pl - pr) / rows.length;
+    const y = (v) => pt + (H - pt - pb) * (1 - v / max);
+    const bars = rows.map((r, i) => {
+      const x = pl + i * bw + bw * 0.15; const w = bw * 0.7;
+      const yv = y(num(r.v)); const yp = y(Math.min(num(r.pagado), num(r.v)));
+      return `<g><title>${r.anio}: ${fullCOP(r.v)} contratados, ${fullCOP(r.pagado)} pagados, ${fmtN(r.n)} contratos</title><rect x="${x}" y="${yv}" width="${w}" height="${H - pb - yv}" rx="3" fill="var(--violet)"/><rect x="${x}" y="${yp - 1.5}" width="${w}" height="3" fill="var(--lime)"/><text x="${x + w / 2}" y="${H - 8}" text-anchor="middle">${String(r.anio).slice(2)}</text>${rows.length <= 12 ? `<text x="${x + w / 2}" y="${yv - 5}" text-anchor="middle" class="lab">${esc(compactCOP(r.v))}</text>` : ''}</g>`;
+    }).join('');
+    return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Valor contratado por año"><line x1="${pl}" x2="${W - pr}" y1="${H - pb}" y2="${H - pb}" stroke="var(--line)"/>${bars}</svg></div>`;
+  }
+  function compactCOP(v) { const n = num(v); if (n >= 1e12) return nf1.format(n / 1e12) + ' B'; if (n >= 1e9) return nf1.format(n / 1e9) + ' mM'; if (n >= 1e6) return nf0.format(n / 1e6) + ' M'; return nf0.format(n); }
+  function monthChart(byM) {
+    const months = Object.keys(byM).sort(); if (!months.length) return 'Sin datos.';
+    const W = 560, H = 130, pb = 18, pt = 8; const max = Math.max(...months.map((m) => byM[m])) || 1; const bw = W / months.length;
+    const hi = (m) => ['2023-10', '2023-11', '2023-12', '2026-05', '2026-06', '2026-07'].includes(m);
+    return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Valor firmado por mes">${months.map((m, i) => { const h = (H - pb - pt) * byM[m] / max; return `<g><title>${m}: ${fullCOP(byM[m])}</title><rect x="${i * bw + 1}" y="${H - pb - h}" width="${Math.max(bw - 2, 1)}" height="${h}" fill="${hi(m) ? 'var(--coral)' : 'var(--violet)'}"/></g>`; }).join('')}${months.filter((m) => m.endsWith('-01')).map((m) => `<text x="${months.indexOf(m) * bw}" y="${H - 4}">${m.slice(0, 4)}</text>`).join('')}</svg></div><span class="muted" style="font-size:.78rem">En coral, los meses de cierre de gobierno comparados.</span>`;
+  }
+  function bar(label, v, max, valTxt, cls = '') {
+    return `<div class="bar"><span class="lbl" title="${esc(label)}">${esc(label)}</span><span class="num">${valTxt}</span><span class="track"><span class="fill ${cls}" style="width:${Math.max(0.5, (v / max) * 100)}%;display:block"></span></span></div>`;
+  }
+  function modBars(rows) {
+    const m = new Map(); for (const r of rows) { const k = r.m || 'Sin modalidad'; const c = m.get(k) || { n: 0, v: 0 }; c.n += num(r.n); c.v += num(r.v); m.set(k, c); }
+    const arr = [...m.entries()].sort((a, b) => b[1].v - a[1].v); const tot = sum(arr, (x) => x[1].v); const max = arr[0]?.[1].v || 1;
+    return `<div class="bars">${arr.map(([k, x]) => bar(k, x.v, max, `${fmtCOP(x.v)} · ${fmtPct(tot ? x.v / tot : 0)} · ${fmtN(x.n)}`, /directa/i.test(k) ? 'coral' : '')).join('')}</div>`;
+  }
+
+  // ---------------------------------------------------------------- Tabla de contratos
+  function contractTable(root, rows) {
+    const st = { q: '', sort: 'fecha_de_firma', dir: -1, page: 0, size: 25 };
+    const cols = [['fecha_de_firma', 'Firma'], ['objeto_del_contrato', 'Objeto y contratista'], ['modalidad_de_contratacion', 'Modalidad'], ['valor_del_contrato', 'Valor', 'r'], ['valor_pagado', 'Pagado', 'r'], ['estado_contrato', 'Estado']];
+    const draw = () => {
+      const qn = normTxt(st.q);
+      let r = rows.filter((x) => !qn || normTxt(`${x.objeto_del_contrato} ${x.proveedor_adjudicado} ${x.id_contrato} ${x.modalidad_de_contratacion}`).includes(qn));
+      r = r.slice().sort((a, b) => { const A = a[st.sort], B = b[st.sort]; const na = Number(A), nb = Number(B); const c = Number.isFinite(na) && Number.isFinite(nb) && A !== '' && B !== '' ? na - nb : String(A || '').localeCompare(String(B || '')); return c * st.dir; });
+      const pages = Math.max(1, Math.ceil(r.length / st.size)); st.page = Math.min(st.page, pages - 1);
+      const view = r.slice(st.page * st.size, (st.page + 1) * st.size);
+      root.innerHTML = `<div class="row" style="margin-bottom:8px"><label class="field" style="flex:1;min-width:200px"><span class="eyebrow">Filtrar</span><input id="ctfilter" value="${esc(st.q)}" placeholder="Objeto, contratista, modalidad o ID"></label><span class="muted num">${fmtN(r.length)} contratos</span></div>
+        <div class="tablewrap"><table><thead><tr>${cols.map(([k, l, c]) => `<th class="${c || ''}" data-sort="${k}">${l}${st.sort === k ? (st.dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('')}</tr></thead><tbody>${view.map((x) => `<tr><td class="num">${fmtDate(x.fecha_de_firma)}</td><td class="objeto"><button class="linkbtn" data-contract="${esc(x.id_contrato)}">${esc(String(x.objeto_del_contrato || '').slice(0, 160))}</button><span class="sub">${esc(x.proveedor_adjudicado)} · ${esc(x.id_contrato)}</span></td><td>${esc(x.modalidad_de_contratacion)}</td><td class="r" title="${fullCOP(x.valor_del_contrato)}">${fmtCOP(x.valor_del_contrato)}</td><td class="r">${fmtCOP(x.valor_pagado)}</td><td>${esc(x.estado_contrato)}${urlOf(x.urlproceso) ? `<span class="sub"><a href="${esc(urlOf(x.urlproceso))}" target="_blank" rel="noopener">SECOP ↗</a></span>` : ''}</td></tr>`).join('')}</tbody></table></div>
+        <div class="row" style="justify-content:space-between;margin-top:8px"><button class="btn" id="ctprev" ${st.page === 0 ? 'disabled' : ''}>Anterior</button><span class="muted num">Página ${st.page + 1} de ${pages}</span><button class="btn" id="ctnext" ${st.page >= pages - 1 ? 'disabled' : ''}>Siguiente</button></div>
+        ${rows.length >= 1000 ? '<p class="muted" style="font-size:.78rem">Se cargaron los 1.000 contratos más recientes del periodo. Elija un periodo más corto para ver los demás.</p>' : ''}`;
+      const f = $('#ctfilter', root); f.oninput = () => { st.q = f.value; st.page = 0; const pos = f.selectionStart; draw(); const nf = $('#ctfilter', root); nf.focus(); nf.setSelectionRange(pos, pos); };
+      $$('th[data-sort]', root).forEach((th) => (th.onclick = () => { const k = th.dataset.sort; st.dir = st.sort === k ? -st.dir : -1; st.sort = k; draw(); }));
+      $('#ctprev', root).onclick = () => { st.page--; draw(); }; $('#ctnext', root).onclick = () => { st.page++; draw(); };
+    };
+    draw();
+    bindNav(root);
+  }
+
+  function sancionesTable2(p) {
+    if (!p.ok) return errBox(p);
+    if (!p.rows.length) return '<p class="muted">No hay multas ni sanciones registradas por esta entidad en SECOP II.</p>';
+    return `<div class="tablewrap"><table><thead><tr><th>Fecha</th><th>Contratista</th><th>Tipo</th><th>Estado</th><th class="r">Valor</th><th>Acto</th></tr></thead><tbody>${p.rows.map((r) => `<tr><td class="num">${fmtDate(r.fecha_evento)}</td><td>${esc(r.nombre_proveedor_objeto_de)}<span class="sub"><button class="linkbtn mono" data-contract="${esc(r.id_contrato)}">${esc(r.id_contrato)}</button></span></td><td>${esc(r.tipo_de_sancion)}<span class="sub">${esc(r.tipo)}</span></td><td>${esc(r.estado)}</td><td class="r">${fmtCOP(r.valor)}</td><td>${esc(r.numero_de_acto)}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+  function sancionesTable1(p) {
+    if (!p.ok) return errBox(p);
+    if (!p.rows.length) return '<p class="muted">No hay multas ni sanciones registradas en SECOP I para este NIT.</p>';
+    return `<div class="tablewrap"><table><thead><tr><th>En firme</th><th>Contratista</th><th>Contrato</th><th>Resolución</th><th class="r">Valor</th></tr></thead><tbody>${p.rows.map((r) => `<tr><td class="num">${fmtDate(r.fecha_de_firmeza)}</td><td>${esc(r.nombre_contratista)}<span class="sub">${esc(r.nombre_entidad)}</span></td><td class="mono">${esc(r.numero_de_contrato)}</td><td>${esc(r.numero_de_resolucion)}${urlOf(r.ruta_de_proceso) ? ` <a href="${esc(urlOf(r.ruta_de_proceso))}" target="_blank" rel="noopener">↗</a>` : ''}</td><td class="r">${fmtCOP(r.valor_sancion)}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+
+  // ---------------------------------------------------------------- Red (Cytoscape)
+  function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function drawGraph(elements, onTap) {
+    const el = $('#cy');
+    if (!window.cytoscape) { el.innerHTML = '<p class="muted" style="padding:14px">No se pudo cargar la librería de grafos. La misma información está en la pestaña de contratistas.</p>'; return; }
+    const cy = window.cytoscape({
+      container: el, elements, wheelSensitivity: 0.2,
+      style: [
+        { selector: 'node', style: { label: 'data(label)', 'font-size': 9, 'text-wrap': 'wrap', 'text-max-width': 110, color: cssVar('--ink'), 'background-color': cssVar('--blue'), width: 'data(size)', height: 'data(size)', 'text-valign': 'bottom', 'text-margin-y': 3, 'font-family': 'Atkinson Hyperlegible, sans-serif' } },
+        { selector: 'node[type="entidad"]', style: { 'background-color': cssVar('--violet'), shape: 'round-rectangle', 'font-size': 11, 'font-weight': 700 } },
+        { selector: 'node[type="ordenador"]', style: { 'background-color': cssVar('--coral'), shape: 'diamond' } },
+        { selector: 'node[type="rep"]', style: { 'background-color': cssVar('--coral'), shape: 'diamond' } },
+        { selector: 'edge', style: { width: 'data(w)', 'line-color': cssVar('--line'), 'curve-style': 'bezier', opacity: 0.9 } },
+        { selector: 'edge[type="ordena"]', style: { 'line-style': 'dashed', 'line-color': cssVar('--coral') } },
+      ],
+      layout: { name: 'concentric', concentric: (n) => (n.data('type') === 'entidad' || n.data('type') === 'proveedor-centro' ? 10 : n.data('type') === 'ordenador' || n.data('type') === 'rep' ? 5 : 1), levelWidth: () => 1, minNodeSpacing: 18, animate: false },
+    });
+    cy.on('tap', 'node', (e) => onTap(e.target.data()));
+  }
+  function drawEntityGraph(ctx) {
+    const D = ctx.D; const provs = D.prov.ok ? mergeProviders(D.prov.rows).slice(0, 18) : []; const max = provs[0]?.v || 1;
+    const els = [{ data: { id: 'E', label: ctx.name || ctx.nit, type: 'entidad', size: 46 } }];
+    provs.forEach((x, i) => { els.push({ data: { id: 'P' + i, label: `${x.nom}\n${compactCOP(x.v)}`, type: 'proveedor', size: 14 + 26 * Math.sqrt(x.v / max), doc: x.doc, nom: x.nom } }); els.push({ data: { id: 'eP' + i, source: 'E', target: 'P' + i, w: 1 + 6 * (x.v / max) } }); });
+    (D.ordenadores.rows || []).slice(0, 6).forEach((o, i) => { els.push({ data: { id: 'O' + i, label: `${o.nom}\nordenador del gasto · ${o.n} contratos`, type: 'ordenador', size: 18 } }); els.push({ data: { id: 'eO' + i, source: 'O' + i, target: 'E', type: 'ordena', w: 1.5 } }); });
+    drawGraph(els, (d) => { if (d.type === 'proveedor') openProvider(d.doc, d.nom); });
+  }
+
+  // ---------------------------------------------------------------- Ficha de contratista (Módulo 6)
+  function openProvider(doc, name) {
+    const ctx = { kind: 'proveedor', doc: String(doc).trim(), name, pk: 'todo', tab: 'resumen', D: null };
+    ctx.render = () => renderProvider(ctx);
+    state.current = ctx; navTo('ficha');
+  }
+  async function loadProvider(doc, pk) {
+    const P = getPeriod(pk); const W = `documento_proveedor=${sqlStr(doc)}`; const WP = `${W} AND ${periodWhere('fecha_de_firma', P)}`;
+    const jobs = {
+      years: part('contratos', { select: 'date_extract_y(fecha_de_firma) as anio,count(*) as n,sum(valor_del_contrato) as v,sum(valor_pagado) as pagado', where: W, group: 'date_extract_y(fecha_de_firma)', order: 'date_extract_y(fecha_de_firma)', limit: 50 }),
+      ents: part('contratos', { select: 'nombre_entidad as nom,nit_entidad as nit,departamento as dep,count(*) as n,sum(valor_del_contrato) as v', where: WP, group: 'nombre_entidad,nit_entidad,departamento', order: 'sum(valor_del_contrato) DESC', limit: 500 }),
+      mods: part('contratos', { select: 'modalidad_de_contratacion as m,justificacion_modalidad_de as j,count(*) as n,sum(valor_del_contrato) as v', where: WP, group: 'modalidad_de_contratacion,justificacion_modalidad_de', limit: 200 }),
+      deps: part('contratos', { select: 'departamento as dep,count(*) as n,sum(valor_del_contrato) as v', where: WP, group: 'departamento', order: 'sum(valor_del_contrato) DESC', limit: 60 }),
+      names: part('contratos', { select: 'proveedor_adjudicado as nom,tipodocproveedor as tipo,es_grupo,es_pyme,nombre_representante_legal as rep,count(*) as n', where: W, group: 'proveedor_adjudicado,tipodocproveedor,es_grupo,es_pyme,nombre_representante_legal', order: 'count(*) DESC', limit: 20 }),
+      list: part('contratos', { select: CONTRACT_FIELDS, where: WP, order: 'fecha_de_firma DESC', limit: 1000 }),
+      secop1: part('integrado', { select: 'origen,count(*) as n,sum(valor_contrato) as v', where: W, group: 'origen', limit: 5 }),
+      multas1: part('multas1', { select: 'nombre_entidad,numero_de_resolucion,nombre_contratista,documento_contratista,numero_de_contrato,valor_sancion,fecha_de_firmeza,ruta_de_proceso', where: `documento_contratista=${sqlStr(doc)}`, order: 'fecha_de_firmeza DESC', limit: 100 }),
+    };
+    const keys = Object.keys(jobs); const vals = await Promise.all(Object.values(jobs));
+    const D = Object.fromEntries(keys.map((k, i) => [k, vals[i]]));
+    const ids = D.list.rows.map((r) => r.id_contrato).filter(Boolean).slice(0, 120);
+    D.multas2 = ids.length ? await part('multas2', { select: 'id_contrato,nombre_entidad_creadora,nombre_proveedor_objeto_de,valor,valor_pagado,fecha_evento,numero_de_acto,tipo_de_sancion,estado,tipo', where: `id_contrato in (${ids.map(sqlStr).join(',')})`, order: 'fecha_evento DESC', limit: 200 }) : { ok: true, rows: [], ds: 'multas2' };
+    D.period = P; return D;
+  }
+  async function renderProvider(ctx) {
+    setView(`<div class="stack"><div class="profile-head"><span class="eyebrow">Contratista · documento ${esc(ctx.doc)}</span><h2>${esc(ctx.name || ctx.doc)}</h2><div class="idline" id="idline"></div></div>
+      <div class="row" style="justify-content:space-between;align-items:flex-end">${periodSelect(ctx.pk)}<div class="row" id="exportbar"></div></div>
+      <div class="tabs" role="tablist" id="tabs"></div><div id="tabbody" class="stack"><p class="loading">Consultando SECOP…</p></div></div>`);
+    $('#period').addEventListener('change', (e) => { ctx.pk = e.target.value; ctx.D = null; renderProvider(ctx); });
+    if (!ctx.D) ctx.D = await loadProvider(ctx.doc, ctx.pk);
+    if (state.current !== ctx) return;
+    const D = ctx.D; const nm = D.names.rows;
+    const tipo = nm[0]?.tipo || '';
+    if (!isCompanyDoc(tipo)) $('.profile-head .eyebrow').textContent = `Contratista · ${tipo || 'documento'} ${maskDoc(ctx.doc, tipo)}`;
+    const reps = [...new Set(nm.map((r) => r.rep).filter((r) => r && !/no definido|sin descrip/i.test(r)))];
+    $('#idline').innerHTML = `<span>${esc(tipo)}</span>${nm.some((r) => r.es_grupo === 'Si') ? '<span>Ha contratado como consorcio o unión temporal</span>' : ''}${nm.some((r) => r.es_pyme === 'Si') ? '<span>Registrado como pyme</span>' : ''}${nm.length > 1 ? `<span>${nm.length} variantes de nombre con el mismo documento</span>` : ''}`;
+    const tabs = [['resumen', 'Resumen'], ['entidades', 'Entidades'], ['red', 'Red'], ['contratos', 'Contratos'], ['sanciones', 'Sanciones']];
+    $('#tabs').innerHTML = tabs.map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${ctx.tab === k}">${l}</button>`).join('');
+    $('#tabs').onclick = (e) => { const b = e.target.closest('[data-tab]'); if (!b) return; ctx.tab = b.dataset.tab; $$('#tabs button').forEach((x) => x.setAttribute('aria-selected', x === b)); draw(); };
+    $('#exportbar').innerHTML = `<button class="btn" id="xcsv">CSV</button><button class="btn" id="xxlsx">Excel</button>`;
+    $('#xcsv').onclick = () => exportCSV(D.list.rows, `contratos_proveedor_${ctx.doc}.csv`);
+    $('#xxlsx').onclick = () => exportXLSX(ctx);
+    const draw = () => {
+      const body = $('#tabbody');
+      if (ctx.tab === 'resumen') {
+        const ents = D.ents.rows; const tot = sum(ents, 'v'); const n = sum(ents, 'n'); const s1 = D.secop1.rows.find((r) => r.origen === 'SECOPI');
+        const top = ents[0]; const dep = D.deps.rows;
+        body.innerHTML = `<div class="kpis"><div class="kpi"><span class="l">Contratos (SECOP II, periodo)</span><span class="v">${fmtN(n)}</span></div><div class="kpi"><span class="l">Valor adjudicado</span><span class="v" title="${fullCOP(tot)}">${fmtCOP(tot)}</span></div><div class="kpi"><span class="l">Entidades contratantes</span><span class="v">${fmtN(new Set(ents.map((e) => e.nit)).size)}</span></div><div class="kpi"><span class="l">Mayor cliente</span><span class="v" style="font-size:1rem">${top ? esc(top.nom) + ' · ' + fmtPct(tot ? top.v / tot : 0) : '—'}</span></div></div>
+          <div class="grid2"><div class="card"><h3>Evolución anual</h3>${D.years.ok ? yearChart(D.years.rows.filter((r) => r.anio)) : errBox(D.years)}${qlink(D.years)}</div>
+          <div class="card"><h3>Modalidades</h3>${D.mods.ok ? modBars(D.mods.rows) : errBox(D.mods)}${qlink(D.mods)}</div></div>
+          <div class="grid2"><div class="card"><h3>Departamentos</h3>${D.deps.ok ? `<div class="bars">${dep.slice(0, 12).map((d) => bar(d.dep || 'Sin dato', num(d.v), num(dep[0].v) || 1, fmtCOP(d.v), 'blue')).join('')}</div>` : errBox(D.deps)}${qlink(D.deps)}</div>
+          <div class="card"><h3>Datos de registro</h3><div class="facts"><div><span>Representante(s) legal(es) en SECOP II</span><span>${reps.length ? reps.map(esc).join('<br>') : 'No diligenciado'}</span></div><div><span>Contratos en SECOP I</span><span>${D.secop1.ok ? (s1 ? `${fmtN(s1.n)} · ${fmtCOP(s1.v)}` : 'Sin registros') : 'Fuente no disponible'}</span></div></div>
+          <p class="muted" style="font-size:.78rem">Socios, accionistas y beneficiarios finales no están en SECOP. Se consultan en el RUES y en cámaras de comercio, que no permiten consulta automatizada.</p>${qlink(D.names)}</div></div>`;
+      } else if (ctx.tab === 'entidades') {
+        const ents = D.ents.rows; const tot = sum(ents, 'v');
+        body.innerHTML = `<div class="card"><h3>Entidades que le han contratado</h3>${!D.ents.ok ? errBox(D.ents) : `<div class="tablewrap"><table><thead><tr><th>Entidad</th><th class="r">Contratos</th><th class="r">Valor</th><th class="r">Participación</th></tr></thead><tbody>${ents.map((e) => `<tr><td><button class="linkbtn" data-ent="${esc(e.nit)}" data-name="${esc(e.nom)}">${esc(e.nom)}</button><span class="sub">NIT ${esc(e.nit)} · ${esc(e.dep)}</span></td><td class="r">${fmtN(e.n)}</td><td class="r">${fmtCOP(e.v)}</td><td class="r">${fmtPct(tot ? e.v / tot : 0)}</td></tr>`).join('')}</tbody></table></div>`}${qlink(D.ents)}</div>`;
+        bindNav(body);
+      } else if (ctx.tab === 'red') {
+        body.innerHTML = `<div class="card"><h3>Red documentada del contratista</h3><div id="cy"></div><p class="muted" style="font-size:.85rem">Entidades que le adjudicaron contratos y representante(s) legal(es) declarado(s) en SECOP II. Toque una entidad para abrir su ficha.</p>${qlink(D.ents)}</div>`;
+        const ents = D.ents.rows.slice(0, 20); const max = num(ents[0]?.v) || 1;
+        const els = [{ data: { id: 'C', label: ctx.name || ctx.doc, type: 'proveedor-centro', size: 46 } }];
+        ents.forEach((e, i) => { els.push({ data: { id: 'E' + i, label: `${e.nom}\n${compactCOP(e.v)}`, type: 'entidad', size: 14 + 26 * Math.sqrt(num(e.v) / max), nit: e.nit, nom: e.nom } }); els.push({ data: { id: 'x' + i, source: 'E' + i, target: 'C', w: 1 + 6 * (num(e.v) / max) } }); });
+        reps.slice(0, 4).forEach((r, i) => { els.push({ data: { id: 'R' + i, label: `${r}\nrepresentante legal`, type: 'rep', size: 18 } }); els.push({ data: { id: 'r' + i, source: 'R' + i, target: 'C', type: 'ordena', w: 1.5 } }); });
+        drawGraph(els, (d) => { if (d.type === 'entidad') openEntity(d.nit, d.nom); });
+      } else if (ctx.tab === 'contratos') {
+        body.innerHTML = `<div class="card"><h3>Contratos</h3>${D.list.ok ? '' : errBox(D.list)}<div id="ctable"></div>${qlink(D.list)}</div>`;
+        if (D.list.ok) contractTable($('#ctable'), D.list.rows);
+      } else if (ctx.tab === 'sanciones') {
+        body.innerHTML = `<div class="notice info"><b>Distinga estados</b><span>Sanciones contractuales publicadas en SECOP. En SECOP II se buscan por los contratos del periodo elegido (hasta 120). "A la espera de aprobación" no es una decisión en firme.</span></div><div class="card"><h3>SECOP II</h3>${sancionesTable2(D.multas2)}${qlink(D.multas2)}</div><div class="card"><h3>SECOP I</h3>${sancionesTable1(D.multas1)}${qlink(D.multas1)}</div>`;
+        bindNav(body);
+      }
+    };
+    draw();
+  }
+
+  // ---------------------------------------------------------------- Detalle de contrato
+  function openContract(id) {
+    const ctx = { kind: 'contrato', id: id.trim(), D: null };
+    ctx.render = () => renderContract(ctx);
+    state.current = ctx; navTo('ficha');
+  }
+  async function renderContract(ctx) {
+    setView(`<div class="stack"><div class="profile-head"><span class="eyebrow">Contrato · ${esc(ctx.id)}</span><h2 id="ctitle">Consultando…</h2></div><div id="cbody" class="stack"><p class="loading">Consultando SECOP II…</p></div></div>`);
+    if (!ctx.D) {
+      const idq = sqlStr(ctx.id);
+      const [c, ad, ej, mu] = await Promise.all([
+        part('contratos', { select: CONTRACT_FIELDS + ',proceso_de_compra,sector,orden,duraci_n_del_contrato,nombre_ordenador_del_gasto,nombre_supervisor,nombre_representante_legal,origen_de_los_recursos,presupuesto_general_de_la_nacion_pgn,sistema_general_de_participaciones,sistema_general_de_regal_as,recursos_propios_alcald_as_gobernaciones_y_resguardos_ind_genas_,recursos_propios,el_contrato_puede_ser_prorrogado,liquidaci_n,valor_pendiente_de_pago', where: `id_contrato=${idq}`, limit: 5 }),
+        part('adiciones', { select: 'identificador,tipo,descripcion,fecharegistro', where: `id_contrato=${idq}`, order: 'fecharegistro ASC', limit: 200 }),
+        part('ejecucion', { select: 'nombreplan,tipoejecucion,fechadeentregaesperada,porcentajedeavanceesperado,fechadeentregareal,porcentaje_de_avance_real,estado_del_contrato,fechacreacion', where: `identificadorcontrato=${idq}`, order: 'fechacreacion ASC', limit: 500 }),
+        part('multas2', { select: 'fecha_evento,tipo_de_sancion,estado,tipo,valor,numero_de_acto', where: `id_contrato=${idq}`, limit: 50 }),
+      ]);
+      ctx.D = { c, ad, ej, mu };
+    }
+    if (state.current !== ctx) return;
+    const { c, ad, ej, mu } = ctx.D; const x = c.rows[0];
+    if (!c.ok) { $('#ctitle').textContent = 'No fue posible consultar el contrato'; $('#cbody').innerHTML = errBox(c); return; }
+    if (!x) { $('#ctitle').textContent = 'Contrato no encontrado en SECOP II'; $('#cbody').innerHTML = `<p class="muted">Verifique el identificador (formato CO1.PCCNTR.123456). Los contratos de SECOP I no tienen este formato.</p>${qlink(c)}`; return; }
+    $('#ctitle').textContent = String(x.objeto_del_contrato || '').slice(0, 220);
+    const v = num(x.valor_del_contrato), pg = num(x.valor_pagado);
+    const ini = x.fecha_de_inicio_del_contrato ? new Date(x.fecha_de_inicio_del_contrato) : null; const fin = x.fecha_de_fin_del_contrato ? new Date(x.fecha_de_fin_del_contrato) : null;
+    const tPct = ini && fin && fin > ini ? Math.min(1, Math.max(0, (TODAY - ini) / (fin - ini))) : null;
+    const lastEj = ej.rows.length ? ej.rows[ej.rows.length - 1] : null;
+    const flags = [];
+    if (x.estado_contrato === 'En ejecución' && fin && (TODAY - fin) / 864e5 > 90) flags.push(['media', `Figura en ejecución aunque terminó hace ${fmtN((TODAY - fin) / 864e5)} días.`]);
+    if (num(x.dias_adicionados) >= 180) flags.push(['media', `Prorrogado ${fmtN(x.dias_adicionados)} días.`]);
+    if (fin && TODAY > fin && v >= 1e8 && pg < v * 0.5) flags.push(['media', `Terminado con ${fmtPct(v ? pg / v : 0)} del valor pagado según SECOP II.`]);
+    if (lastEj && num(lastEj.porcentajedeavanceesperado) - num(lastEj.porcentaje_de_avance_real) >= 20) flags.push(['media', `El último reporte de ejecución muestra avance real de ${nf1.format(num(lastEj.porcentaje_de_avance_real))} % frente a ${nf1.format(num(lastEj.porcentajedeavanceesperado))} % esperado.`]);
+    if (v && pg / v > 0.8 && lastEj && num(lastEj.porcentaje_de_avance_real) < 50) flags.push(['alta', 'Pagado más del 80 % con avance real reportado por debajo del 50 %.']);
+    $('#cbody').innerHTML = `
+      <div class="kpis"><div class="kpi"><span class="l">Valor del contrato</span><span class="v" title="${fullCOP(v)}">${fmtCOP(v)}</span></div><div class="kpi"><span class="l">Pagado (SECOP II)</span><span class="v">${fmtCOP(pg)} <small class="muted" style="font-size:.9rem">${fmtPct(v ? pg / v : 0)}</small></span></div><div class="kpi"><span class="l">Tiempo transcurrido</span><span class="v">${tPct == null ? '—' : fmtPct(tPct, 0)}</span></div><div class="kpi"><span class="l">Días adicionados</span><span class="v">${fmtN(x.dias_adicionados)}</span></div></div>
+      ${flags.length ? `<div class="stack">${flags.map(([n, t]) => `<div class="alert ${n}"><div class="row">${levelBadge(n)}<span>${esc(t)}</span></div></div>`).join('')}</div>` : '<div class="alert sin"><div class="row">' + levelBadge('sin') + '<span>Ninguna de las verificaciones automáticas de este contrato encontró señales.</span></div></div>'}
+      <div class="card"><h3>Ficha</h3><div class="facts">
+        ${[['Entidad', `<button class="linkbtn" data-ent="${esc(x.nit_entidad)}" data-name="${esc(x.nombre_entidad)}">${esc(x.nombre_entidad)}</button>`], ['Contratista', `<button class="linkbtn" data-prov="${esc(x.documento_proveedor)}" data-name="${esc(x.proveedor_adjudicado)}">${esc(x.proveedor_adjudicado)}</button>`], ['Representante legal', esc(x.nombre_representante_legal)], ['Referencia', esc(x.referencia_del_contrato)], ['Tipo', esc(x.tipo_de_contrato)], ['Modalidad', esc(x.modalidad_de_contratacion)], ['Justificación', esc(x.justificacion_modalidad_de)], ['Estado', esc(x.estado_contrato)], ['Firma', fmtDate(x.fecha_de_firma)], ['Inicio', fmtDate(x.fecha_de_inicio_del_contrato)], ['Terminación', fmtDate(x.fecha_de_fin_del_contrato)], ['Duración', esc(x.duraci_n_del_contrato)], ['Ordenador del gasto', esc(x.nombre_ordenador_del_gasto)], ['Supervisor', esc(x.nombre_supervisor)], ['Destino del gasto', esc(x.destino_gasto)], ['Origen de los recursos', esc(x.origen_de_los_recursos)], ['Lugar', `${esc(x.ciudad)}, ${esc(x.departamento)}`], ['Proceso', esc(x.proceso_de_compra)]].map(([k, val]) => `<div><span>${k}</span><span>${val || '—'}</span></div>`).join('')}
+      </div>${urlOf(x.urlproceso) ? `<a class="btn primary" style="width:fit-content" href="${esc(urlOf(x.urlproceso))}" target="_blank" rel="noopener">Ver documentos en SECOP II ↗</a>` : ''}${qlink(c)}</div>
+      <div class="grid2">
+        <div class="card"><h3>Avance reportado en el plan de ejecución</h3>${!ej.ok ? errBox(ej) : !ej.rows.length ? '<p class="muted">La entidad no ha registrado plan de ejecución para este contrato en SECOP II.</p>' : `<div class="tablewrap"><table><thead><tr><th>Entrega</th><th class="r">Esperado</th><th class="r">Real</th></tr></thead><tbody>${ej.rows.slice(-15).map((r) => `<tr><td>${esc(r.nombreplan)}<span class="sub">${fmtDate(r.fechadeentregaesperada)}</span></td><td class="r">${nf1.format(num(r.porcentajedeavanceesperado))} %</td><td class="r">${nf1.format(num(r.porcentaje_de_avance_real))} %</td></tr>`).join('')}</tbody></table></div>`}<p class="muted" style="font-size:.78rem">Es el avance que reporta la propia entidad en SECOP II, no un informe de interventoría.</p>${qlink(ej)}</div>
+        <div class="card"><h3>Modificaciones registradas</h3>${!ad.ok ? errBox(ad) : !ad.rows.length ? '<p class="muted">Sin modificaciones registradas.</p>' : `<div class="tablewrap"><table><thead><tr><th>Fecha</th><th>Descripción</th></tr></thead><tbody>${ad.rows.map((r) => `<tr><td class="num">${fmtDate(r.fecharegistro)}</td><td>${esc(r.descripcion)}<span class="sub">${esc(r.tipo)} · ${esc(r.identificador)}</span></td></tr>`).join('')}</tbody></table></div>`}${qlink(ad)}</div>
+      </div>
+      <div class="card"><h3>Multas y sanciones sobre este contrato</h3>${!mu.ok ? errBox(mu) : !mu.rows.length ? '<p class="muted">Ninguna registrada en SECOP II.</p>' : `<div class="tablewrap"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Estado</th><th class="r">Valor</th></tr></thead><tbody>${mu.rows.map((r) => `<tr><td>${fmtDate(r.fecha_evento)}</td><td>${esc(r.tipo_de_sancion)}</td><td>${esc(r.estado)}</td><td class="r">${fmtCOP(r.valor)}</td></tr>`).join('')}</tbody></table></div>`}${qlink(mu)}</div>`;
+    bindNav($('#cbody'));
+  }
+
+  // ---------------------------------------------------------------- Módulo 4 · Territorio
+  async function renderTerritory() {
+    const st = state.terr || (state.terr = { year: String(YEAR - 1), metric: 'v' });
+    setView(`<div class="stack"><span class="eyebrow">Módulo 04 · Mapa del clientelismo</span><h2>Contratación pública por departamento</h2>
+      <p class="lead muted">Cada casilla es un departamento, ubicada de forma aproximada. Valores registrados en SECOP II por entidades con sede en el departamento. Un valor alto no prueba clientelismo: es una pista para comparar territorios.</p>
+      <div class="formgrid" style="max-width:640px"><label class="field"><span class="eyebrow">Año de firma</span><select id="tyear">${Array.from({ length: 7 }, (_, i) => YEAR - i).map((y) => `<option ${String(y) === st.year ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
+      <label class="field"><span class="eyebrow">Indicador</span><select id="tmetric"><option value="v" ${st.metric === 'v' ? 'selected' : ''}>Valor contratado</option><option value="n" ${st.metric === 'n' ? 'selected' : ''}>Número de contratos</option><option value="d" ${st.metric === 'd' ? 'selected' : ''}>% del valor por contratación directa</option></select></label></div>
+      <div class="grid2"><div class="card"><div id="carto"><p class="loading">Consultando SECOP II…</p></div><div class="scale"><span>menos</span><i></i><span>más</span></div><div id="tq"></div></div><div class="card" id="tdetail"><h3>Elija un departamento</h3><p class="muted">Verá sus entidades con mayor contratación y el peso de la contratación directa.</p></div></div>
+      <div class="notice info"><b>Pendiente en este módulo</b><span>Inversión por habitante (requiere proyecciones de población del DANE), cambios entre administraciones por municipio y cruce con financiación electoral (Cuentas Claras no ofrece API). Ver <a href="#fuentes">Fuentes</a>.</span></div></div>`);
+    $('#tyear').onchange = (e) => { st.year = e.target.value; renderTerritory(); };
+    $('#tmetric').onchange = (e) => { st.metric = e.target.value; renderTerritory(); };
+    const y = st.year; const W = `fecha_de_firma between '${y}-01-01T00:00:00' and '${y}-12-31T23:59:59'`;
+    const [all, dir] = await Promise.all([
+      part('contratos', { select: 'departamento,count(*) as n,sum(valor_del_contrato) as v', where: W, group: 'departamento', limit: 100 }),
+      part('contratos', { select: 'departamento,sum(valor_del_contrato) as v', where: `${W} AND modalidad_de_contratacion='Contratación directa'`, group: 'departamento', limit: 100 }),
+    ]);
+    if (!/^#m4$/.test(location.hash)) return;
+    if (!all.ok) { $('#carto').innerHTML = errBox(all); return; }
+    const agg = Object.fromEntries(DEPTS.map((d) => [d.code, { n: 0, v: 0, dv: 0 }])); const unmatched = [];
+    for (const r of all.rows) { const d = deptOf(r.departamento); if (d) { agg[d.code].n += num(r.n); agg[d.code].v += num(r.v); } else unmatched.push(r); }
+    for (const r of dir.rows) { const d = deptOf(r.departamento); if (d) agg[d.code].dv += num(r.v); }
+    const val = (a) => (st.metric === 'v' ? a.v : st.metric === 'n' ? a.n : a.v ? a.dv / a.v : 0);
+    const vals = DEPTS.map((d) => val(agg[d.code])); const max = Math.max(...vals) || 1;
+    const scale = st.metric === 'd' ? (x) => x / max : (x) => Math.sqrt(x / max);
+    const color = (t) => { const a = [238, 232, 255], b = [108, 59, 255], c = [42, 15, 143]; const [p, q, u] = t < 0.5 ? [a, b, t * 2] : [b, c, (t - 0.5) * 2]; return `rgb(${p.map((x, i) => Math.round(x + (q[i] - x) * u)).join(',')})`; };
+    const fmtM = (a) => (st.metric === 'v' ? compactCOP(a.v) : st.metric === 'n' ? fmtN(a.n) : fmtPct(a.v ? a.dv / a.v : 0, 0));
+    const grid = []; for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) grid.push(DEPTS.find((d) => d.c === c && d.r === r) || null);
+    $('#carto').innerHTML = `<div class="carto" role="group" aria-label="Cartograma de departamentos">${grid.map((d) => (d ? `<button class="tile ${scale(val(agg[d.code])) > 0.55 ? 'dark' : ''} ${state.terrDept === d.code ? 'sel' : ''}" style="background:${color(scale(val(agg[d.code])))}" data-d="${d.code}" title="${esc(d.name)}: ${fmtM(agg[d.code])}">${d.code}<small>${fmtM(agg[d.code])}</small></button>` : '<span></span>')).join('')}</div>`;
+    $('#tq').innerHTML = qlink(all) + qlink(dir) + (unmatched.length ? `<p class="muted" style="font-size:.78rem">${unmatched.length} registro(s) con departamento no identificable (${unmatched.slice(0, 3).map((u) => esc(u.departamento || 'vacío')).join(', ')}) suman ${fmtCOP(sum(unmatched, 'v'))} y no aparecen en el cartograma.</p>` : '');
+    $('#carto').onclick = (e) => { const b = e.target.closest('[data-d]'); if (!b) return; state.terrDept = b.dataset.d; $$('.tile').forEach((t) => t.classList.toggle('sel', t === b)); deptDetail(b.dataset.d, y, agg[b.dataset.d]); };
+    if (state.terrDept) deptDetail(state.terrDept, y, agg[state.terrDept]);
+  }
+  async function deptDetail(code, y, a) {
+    const d = DEPTS.find((x) => x.code === code); const box = $('#tdetail');
+    box.innerHTML = `<h3>${esc(d.name)} · ${y}</h3><div class="facts"><div><span>Valor contratado</span><span>${fmtCOP(a.v)}</span></div><div><span>Contratos</span><span>${fmtN(a.n)}</span></div><div><span>Contratación directa</span><span>${fmtPct(a.v ? a.dv / a.v : 0)} del valor</span></div></div><p class="loading">Buscando entidades…</p>`;
+    const raws = (await deptRawValues(code)) || [];
+    const p = await part('contratos', { select: 'nombre_entidad,nit_entidad,ciudad,count(*) as n,sum(valor_del_contrato) as v', where: `departamento in (${raws.length ? raws.map(sqlStr).join(',') : "''"}) AND fecha_de_firma between '${y}-01-01T00:00:00' and '${y}-12-31T23:59:59'`, group: 'nombre_entidad,nit_entidad,ciudad', order: 'sum(valor_del_contrato) DESC', limit: 15 });
+    box.querySelector('.loading')?.remove();
+    box.insertAdjacentHTML('beforeend', !p.ok ? errBox(p) : `<div class="tablewrap"><table><thead><tr><th>Entidad</th><th class="r">Valor</th></tr></thead><tbody>${p.rows.map((r) => `<tr><td><button class="linkbtn" data-ent="${esc(r.nit_entidad)}" data-name="${esc(r.nombre_entidad)}">${esc(r.nombre_entidad)}</button><span class="sub">${esc(r.ciudad)} · ${fmtN(r.n)} contratos</span></td><td class="r">${fmtCOP(r.v)}</td></tr>`).join('')}</tbody></table></div>${qlink(p)}`);
+    bindNav(box);
+  }
+
+  // ---------------------------------------------------------------- Módulo 5 · Obras
+  async function renderObras() {
+    const st = state.obra || (state.obra = { q: state.obraQ || '', dep: '', estado: 'todas' });
+    if (state.obraQ) { st.q = state.obraQ; state.obraQ = null; }
+    setView(`<div class="stack"><span class="eyebrow">Módulo 05 · ¿Dónde está la obra?</span><h2>Contratos de obra pública</h2>
+      <p class="lead muted">Busque por palabras del objeto (vía, colegio, acueducto, puente…), municipio o entidad. Se cruzan valor, pagos, plazos, prórrogas y el avance que la entidad reporta en SECOP II.</p>
+      <form id="obraform" class="formgrid" style="align-items:end"><label class="field"><span class="eyebrow">Palabras clave</span><input id="oq" value="${esc(st.q)}" placeholder="pavimentación vía Natagaima"></label>
+      <label class="field"><span class="eyebrow">Departamento</span><select id="odep"><option value="">Todos</option>${DEPTS.map((d) => `<option value="${d.code}" ${st.dep === d.code ? 'selected' : ''}>${esc(d.name)}</option>`).join('')}</select></label>
+      <label class="field"><span class="eyebrow">Filtro</span><select id="oest"><option value="todas">Todas</option><option value="vencidas" ${st.estado === 'vencidas' ? 'selected' : ''}>En ejecución con plazo vencido</option><option value="prorrogadas" ${st.estado === 'prorrogadas' ? 'selected' : ''}>Prorrogadas 180+ días</option></select></label>
+      <button class="btn primary" type="submit" style="height:42px">Buscar obras</button></form>
+      <div id="obras"></div>
+      <div class="notice info"><b>Pendiente en este módulo</b><span>Georreferenciación precisa (SECOP II publica la dirección de ejecución como texto), fotografías oficiales y reportes ciudadanos validados. Los reportes ciudadanos requieren el backend y un protocolo de moderación: no se mezclarán con la información oficial.</span></div></div>`);
+    $('#obraform').onsubmit = (e) => { e.preventDefault(); st.q = $('#oq').value; st.dep = $('#odep').value; st.estado = $('#oest').value; loadObras(st); };
+    if (st.q || st.dep || st.estado !== 'todas') loadObras(st);
+    else $('#obras').innerHTML = '<p class="muted">Escriba palabras clave o elija un departamento para buscar.</p>';
+  }
+  async function loadObras(st) {
+    const box = $('#obras'); box.innerHTML = '<p class="loading">Consultando SECOP II…</p>';
+    const parts = ["tipo_de_contrato='Obra'"];
+    const lk = st.q ? likeAll(['objeto_del_contrato', 'nombre_entidad', 'ciudad'], st.q) : null;
+    if (lk) parts.push(lk);
+    if (st.dep) { const raws = await deptRawValues(st.dep); if (!raws) { box.innerHTML = '<p class="muted">No fue posible obtener la lista de departamentos de SECOP II.</p>'; return; } parts.push(raws.length ? `departamento in (${raws.map(sqlStr).join(',')})` : '1=2'); }
+    if (st.estado === 'vencidas') parts.push(`estado_contrato='En ejecución' AND fecha_de_fin_del_contrato < '${daysAgo(30)}T00:00:00'`);
+    if (st.estado === 'prorrogadas') parts.push('dias_adicionados >= 180');
+    const p = st.q ? await textPart('contratos', { select: CONTRACT_FIELDS, where: parts.join(' AND '), order: 'valor_del_contrato DESC', limit: 200 }, st.q) : await part('contratos', { select: CONTRACT_FIELDS, where: parts.join(' AND '), order: 'valor_del_contrato DESC', limit: 200 });
+    if (!p.ok) { box.innerHTML = errBox(p); return; }
+    if (st.q) { const ws = searchWords(st.q); p.rows = p.rows.filter((x) => matchesAll(`${x.objeto_del_contrato} ${x.nombre_entidad} ${x.ciudad}`, ws)); }
+    if (!p.rows.length) { box.innerHTML = `<p class="muted">Ningún contrato de obra coincide.</p>${qlink(p)}`; return; }
+    const tot = sum(p.rows, 'valor_del_contrato'); const pag = sum(p.rows, 'valor_pagado');
+    const venc = p.rows.filter((r) => r.estado_contrato === 'En ejecución' && r.fecha_de_fin_del_contrato && new Date(r.fecha_de_fin_del_contrato) < TODAY).length;
+    box.innerHTML = `<div class="kpis"><div class="kpi"><span class="l">Obras encontradas</span><span class="v">${fmtN(p.rows.length)}${p.rows.length >= 200 ? '+' : ''}</span></div><div class="kpi"><span class="l">Valor</span><span class="v">${fmtCOP(tot)}</span></div><div class="kpi"><span class="l">Pagado registrado</span><span class="v">${fmtPct(tot ? pag / tot : 0)}</span></div><div class="kpi"><span class="l">En ejecución con plazo vencido</span><span class="v">${fmtN(venc)}</span></div></div>
+      <div class="card"><div id="ctable"></div>${qlink(p)}</div>`;
+    contractTable($('#ctable'), p.rows);
+  }
+
+
+  // ---------------------------------------------------------------- Módulo 02 · Sectores del Estado
+  // Valores exactos del campo "sector" de SECOP II (verificados el 20-oct-2026) y su nombre legible
+  const SECTORS = [
+    ['agricultura', 'Agricultura y desarrollo rural', ['AGRICULTURA', 'AGRO', 'AGROPECUARIO', 'RURAL']],
+    ['Ambiente y Desarrollo Sostenible', 'Ambiente y desarrollo sostenible', ['AMBIENTE', 'AMBIENTAL']],
+    ['Ciencia Tecnología', 'Ciencia, tecnología e innovación', ['CIENCIA']],
+    ['Cultura', 'Cultura', ['CULTURA']],
+    ['defensa', 'Defensa', ['DEFENSA']],
+    ['deportes', 'Deporte', ['DEPORTE', 'DEPORTES']],
+    ['Educación Nacional', 'Educación', ['EDUCACION']],
+    ['Hacienda y Crédito Público', 'Hacienda y crédito público', ['HACIENDA']],
+    ['Inclusión Social y Reconciliación', 'Inclusión social y reconciliación', ['INCLUSION SOCIAL', 'PROSPERIDAD SOCIAL']],
+    ['Industria', 'Comercio, industria y turismo', ['INDUSTRIA', 'COMERCIO', 'TURISMO']],
+    ['Información Estadística', 'Información estadística', ['ESTADISTICA']],
+    ['Inteligencia Estratégica y Contrainteligencia', 'Inteligencia estratégica', ['INTELIGENCIA']],
+    ['interior', 'Interior', ['INTERIOR']],
+    ['Ley de Justicia', 'Justicia y del derecho', ['JUSTICIA']],
+    ['Minas y Energía', 'Minas y energía', ['MINAS', 'ENERGIA', 'MINERO ENERGETICO']],
+    ['Planeación', 'Planeación', ['PLANEACION']],
+    ['Presidencia de la República', 'Presidencia de la República', ['PRESIDENCIA']],
+    ['Relaciones Exteriores', 'Relaciones exteriores', ['RELACIONES EXTERIORES', 'CANCILLERIA']],
+    ['Salud y Protección Social', 'Salud y protección social', ['SALUD']],
+    ['Servicio Público', 'Servicio público (incluye muchas entidades territoriales)', ['SERVICIO PUBLICO']],
+    ['Tecnologías de la Información y las Comunicaciones', 'Tecnologías de la información (TIC)', ['TIC', 'TECNOLOGIAS DE LA INFORMACION']],
+    ['Trabajo', 'Trabajo', ['TRABAJO']],
+    ['Transporte', 'Transporte', ['TRANSPORTE']],
+    ['Vivienda, Ciudad y Territorio', 'Vivienda, ciudad y territorio', ['VIVIENDA']],
+  ].map(([v, l, k]) => ({ v, l, k }));
+  const sectorOf = (raw) => SECTORS.find((x) => normTxt(x.v) === normTxt(raw)) || null;
+  function sectorMatch(text) {
+    const t = normTxt(text).replace(/^SECTOR( DE| DEL)?\s+/, '').trim();
+    return SECTORS.find((x) => x.k.some((k) => t === k || t === 'SECTOR ' + k)) || null;
+  }
+
+  async function renderSector() {
+    const st = state.sector || (state.sector = { v: 'agricultura', y: String(YEAR), orden: '', q: '' });
+    if (!st.y) st.y = String(YEAR); if (st.orden == null) st.orden = '';
+    const S = sectorOf(st.v) || SECTORS[0];
+    setView(`<div class="stack"><span class="eyebrow">Módulo 02 · Sectores del Estado</span><h2>${esc(S.l)}</h2>
+      <p class="lead muted">Contratación de las entidades que SECOP II clasifica en este sector. El sector es el de la entidad que contrata, no el del objeto del contrato: una alcaldía que compra semillas suele figurar como "Servicio público". Para eso use la búsqueda por palabras clave, que también puede ampliarse a todas las entidades.</p>
+      <form id="secform" class="formgrid" style="align-items:end">
+        <label class="field"><span class="eyebrow">Sector</span><select id="secv">${SECTORS.map((x) => `<option value="${esc(x.v)}" ${x.v === S.v ? 'selected' : ''}>${esc(x.l)}</option>`).join('')}</select></label>
+        <label class="field"><span class="eyebrow">Año de firma</span><select id="secy">${Array.from({ length: 7 }, (_, i) => String(YEAR - i)).map((y) => `<option ${y === st.y ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
+        <label class="field"><span class="eyebrow">Orden</span><select id="seco"><option value="">Todos</option>${['Nacional', 'Territorial', 'Corporación Autónoma'].map((o) => `<option ${o === st.orden ? 'selected' : ''}>${o}</option>`).join('')}</select></label>
+        <label class="field"><span class="eyebrow">Palabras en el objeto (opcional)</span><input id="secq" value="${esc(st.q)}" placeholder="riego, vías terciarias, semillas…"></label>
+        <button class="btn primary" type="submit" style="height:42px">Consultar</button>
+      </form>
+      <div class="row" id="secexport"></div>
+      <div id="secbody" class="stack"><p class="loading">Consultando SECOP II…</p></div></div>`);
+    $('#secform').onsubmit = (e) => { e.preventDefault(); st.v = $('#secv').value; st.y = $('#secy').value; st.orden = $('#seco').value; st.q = $('#secq').value.trim(); renderSector(); };
+    const myRun = (state.secRun = (state.secRun || 0) + 1);
+    const D = await loadSector(st);
+    if (state.secRun !== myRun || location.hash !== '#sector') return;
+    drawSector(st, S, D);
+  }
+
+  async function loadSector(st) {
+    const y = st.y;
+    const parts = [`sector=${sqlStr(st.v)}`, `fecha_de_firma between '${y}-01-01T00:00:00' and '${y}-12-31T23:59:59'`];
+    if (st.orden) parts.push(`orden=${sqlStr(st.orden)}`);
+    const lk = st.q ? likeAll('objeto_del_contrato', st.q) : null;
+    if (lk) parts.push(lk);
+    const W = parts.join(' AND ');
+    const WY = [`sector=${sqlStr(st.v)}`, st.orden ? `orden=${sqlStr(st.orden)}` : null, lk].filter(Boolean).join(' AND ');
+    const run = (dsKey, p) => (st.q ? textPart(dsKey, p, st.q) : part(dsKey, p));
+    const jobs = {
+      tot: run('contratos', { select: 'count(*) as n,sum(valor_del_contrato) as v,sum(valor_pagado) as pagado', where: W }),
+      orden: run('contratos', { select: 'orden,count(*) as n,sum(valor_del_contrato) as v', where: W, group: 'orden', limit: 10 }),
+      years: run('contratos', { select: 'date_extract_y(fecha_de_firma) as anio,count(*) as n,sum(valor_del_contrato) as v,sum(valor_pagado) as pagado', where: `${WY} AND fecha_de_firma >= '${YEAR - 6}-01-01T00:00:00'`, group: 'date_extract_y(fecha_de_firma)', order: 'anio', limit: 20 }),
+      ents: partSorted('contratos', { select: 'nit_entidad,count(*) as n,sum(valor_del_contrato) as v', where: W, group: 'nit_entidad', order: 'v DESC', limit: 20 }, run),
+      provs: run('contratos', { select: 'documento_proveedor,count(*) as n,sum(valor_del_contrato) as v', where: W, group: 'documento_proveedor', order: 'v DESC', limit: 20 }),
+      mods: run('contratos', { select: 'modalidad_de_contratacion as m,justificacion_modalidad_de as j,count(*) as n,sum(valor_del_contrato) as v', where: W, group: 'modalidad_de_contratacion,justificacion_modalidad_de', limit: 500 }),
+      deps: partSorted('contratos', { select: 'departamento,count(*) as n,sum(valor_del_contrato) as v', where: W, group: 'departamento', order: 'v DESC', limit: 60 }, run),
+      top: run('contratos', { select: CONTRACT_FIELDS, where: W, order: 'valor_del_contrato DESC', limit: 300 }),
+    };
+    const keys = Object.keys(jobs); const vals = await Promise.all(Object.values(jobs));
+    const D = Object.fromEntries(keys.map((k, i) => [k, vals[i]]));
+    // El ranking completo de contratistas es la agregación más pesada; si no responde se calcula con los contratos de mayor valor
+    if (!D.provs.ok && D.top.ok && D.top.rows.length) {
+      const m = new Map();
+      for (const r of D.top.rows) { const k = r.documento_proveedor; if (!k) continue; const c = m.get(k) || { documento_proveedor: k, n: 0, v: 0 }; c.n++; c.v += num(r.valor_del_contrato); m.set(k, c); }
+      D.provs = { ok: true, ds: 'contratos', url: D.top.url, rows: [...m.values()].sort((a, b) => b.v - a.v).slice(0, 20), note: `La consulta del ranking completo no respondió a tiempo. Este ranking se calculó sobre los ${D.top.rows.length} contratos de mayor valor del sector, así que subestima a contratistas con muchos contratos pequeños.`, partial: true };
+    }
+    // Nombres de entidades y contratistas (consultas pequeñas sobre los identificadores encontrados)
+    const nits = D.ents.rows.map((r) => r.nit_entidad).filter((x) => /^\d+$/.test(String(x)));
+    const docs = D.provs.rows.map((r) => r.documento_proveedor).filter(Boolean);
+    const [en, pn] = await Promise.all([
+      nits.length ? part('contratos', { select: 'nit_entidad,nombre_entidad,departamento,count(*) as n', where: `nit_entidad in (${nits.join(',')}) AND sector=${sqlStr(st.v)}`, group: 'nit_entidad,nombre_entidad,departamento', limit: 500 }) : { ok: true, rows: [] },
+      docs.length ? part('contratos', { select: 'documento_proveedor,proveedor_adjudicado,tipodocproveedor,count(*) as n', where: `documento_proveedor in (${docs.map(sqlStr).join(',')}) AND sector=${sqlStr(st.v)}`, group: 'documento_proveedor,proveedor_adjudicado,tipodocproveedor', limit: 500 }) : { ok: true, rows: [] },
+    ]);
+    const best = (rows, key, nameKey) => { const m = new Map(); for (const r of rows) { const c = m.get(r[key]); if (!c || num(r.n) > num(c.n)) m.set(r[key], r); } return m; };
+    D.entNames = best(en.rows, 'nit_entidad'); D.provNames = best(pn.rows, 'documento_proveedor');
+    return D;
+  }
+
+  function drawSector(st, S, D) {
+    const body = $('#secbody');
+    if (!D.tot.ok) { body.innerHTML = errBox(D.tot); return; }
+    const t = D.tot.rows[0] || {}; const tot = num(t.v); const n = num(t.n);
+    if (!n) { body.innerHTML = `<p class="muted">No hay contratos de este sector con esos filtros en ${esc(st.y)}.</p>${qlink(D.tot)}${st.q ? '<button class="btn" id="secall">Buscar esas palabras en todas las entidades</button>' : ''}`; bindSecAll(st); return; }
+    const mods = D.mods.rows; const dirV = sum(mods.filter((r) => /directa/i.test(r.m || '')), 'v');
+    const dirSP = sum(mods.filter((r) => /directa/i.test(r.m || '') && /profesionales|apoyo a la gesti/i.test(r.j || '')), 'v');
+    const ents = D.ents.rows.map((r) => ({ ...r, nom: D.entNames.get(r.nit_entidad)?.nombre_entidad || 'NIT ' + r.nit_entidad, dep: D.entNames.get(r.nit_entidad)?.departamento || '' }));
+    const provs = D.provs.rows.map((r) => ({ ...r, nom: D.provNames.get(r.documento_proveedor)?.proveedor_adjudicado || r.documento_proveedor, tipo: D.provNames.get(r.documento_proveedor)?.tipodocproveedor || '' }));
+    const top1 = provs[0] ? num(provs[0].v) / (tot || 1) : 0; const top5 = provs.slice(0, 5).reduce((a, x) => a + num(x.v), 0) / (tot || 1);
+    const deps = D.deps.rows; const dmax = num(deps[0]?.v) || 1;
+    const ordRows = D.orden.rows.sort((a, b) => num(b.v) - num(a.v)); const omax = num(ordRows[0]?.v) || 1;
+    body.innerHTML = `
+      <div class="kpis">
+        <div class="kpi"><span class="l">Contratos firmados en ${esc(st.y)}</span><span class="v">${fmtN(n)}</span></div>
+        <div class="kpi"><span class="l">Valor contratado</span><span class="v" title="${fullCOP(tot)}">${fmtCOP(tot)}</span></div>
+        <div class="kpi"><span class="l">Contratación directa</span><span class="v">${fmtPct(tot ? dirV / tot : 0)}</span><span class="l">${fmtPct(tot ? (dirV - dirSP) / tot : 0)} sin servicios profesionales</span></div>
+        <div class="kpi"><span class="l">Cinco mayores contratistas</span><span class="v">${D.provs.ok ? fmtPct(top5) : '—'}</span><span class="l">${D.provs.ok ? `del valor; el primero ${fmtPct(top1)}${D.provs.partial ? ' (aprox.)' : ''}` : 'consulta no disponible'}</span></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><h3>Evolución anual del sector</h3>${D.years.ok ? yearChart(D.years.rows.filter((r) => r.anio)) : errBox(D.years)}<p class="muted" style="font-size:.78rem">Barra: valor contratado. Marca lima: valor pagado registrado en SECOP II. Mismos filtros de orden y palabras clave, todos los años.</p>${qlink(D.years)}</div>
+        <div class="card"><h3>Modalidades</h3>${D.mods.ok ? modBars(mods) : errBox(D.mods)}${qlink(D.mods)}</div>
+      </div>
+      <div class="grid2">
+        <div class="card"><div class="row" style="justify-content:space-between"><h3>Entidades que más contratan</h3><span class="badge live">en vivo</span></div>${!D.ents.ok ? errBox(D.ents) : `<div class="tablewrap"><table><thead><tr><th>#</th><th>Entidad</th><th class="r">Contratos</th><th class="r">Valor</th><th class="r">%</th></tr></thead><tbody>${ents.map((e, i) => `<tr><td class="num">${i + 1}</td><td><button class="linkbtn" data-ent="${esc(e.nit_entidad)}" data-name="${esc(e.nom)}">${esc(e.nom)}</button><span class="sub">NIT ${esc(e.nit_entidad)}${e.dep ? ' · ' + esc(e.dep) : ''}</span></td><td class="r">${fmtN(e.n)}</td><td class="r" title="${fullCOP(e.v)}">${fmtCOP(e.v)}</td><td class="r">${fmtPct(tot ? num(e.v) / tot : 0)}</td></tr>`).join('')}</tbody></table></div>`}${qlink(D.ents)}</div>
+        <div class="card"><div class="row" style="justify-content:space-between"><h3>Contratistas que más reciben</h3><span class="badge live">en vivo</span></div>${!D.provs.ok ? errBox(D.provs) : `<div class="tablewrap"><table><thead><tr><th>#</th><th>Contratista</th><th class="r">Contratos</th><th class="r">Valor</th><th class="r">%</th></tr></thead><tbody>${provs.map((x, i) => `<tr><td class="num">${i + 1}</td><td><button class="linkbtn" data-prov="${esc(x.documento_proveedor)}" data-name="${esc(x.nom)}">${esc(x.nom)}</button><span class="sub">${esc(x.tipo)} ${esc(maskDoc(x.documento_proveedor, x.tipo))}</span></td><td class="r">${fmtN(x.n)}</td><td class="r" title="${fullCOP(x.v)}">${fmtCOP(x.v)}</td><td class="r">${fmtPct(tot ? num(x.v) / tot : 0)}</td></tr>`).join('')}</tbody></table></div>`}<p class="muted" style="font-size:.78rem">${D.provs.note ? esc(D.provs.note) + ' ' : ''}Agrupado por documento del contratista, no por nombre.</p>${qlink(D.provs)}</div>
+      </div>
+      <div class="grid2">
+        <div class="card"><h3>Departamentos</h3>${D.deps.ok ? `<div class="bars">${deps.slice(0, 15).map((d) => bar(d.departamento || 'Sin dato', num(d.v), dmax, `${fmtCOP(d.v)} · ${fmtN(d.n)}`, 'blue')).join('')}</div>` : errBox(D.deps)}<p class="muted" style="font-size:.78rem">Departamento de la sede de la entidad contratante.</p>${qlink(D.deps)}</div>
+        <div class="card"><h3>Orden de las entidades</h3>${D.orden.ok ? `<div class="bars">${ordRows.map((o) => bar(o.orden || 'Sin dato', num(o.v), omax, `${fmtCOP(o.v)} · ${fmtN(o.n)}`)).join('')}</div>` : errBox(D.orden)}${qlink(D.orden)}</div>
+      </div>
+      <div class="card"><h3>Contratos de mayor valor</h3>${D.top.ok ? '' : errBox(D.top)}<div id="ctable"></div><p class="muted" style="font-size:.78rem">Los 300 contratos de mayor valor con estos filtros.</p>${qlink(D.top)}</div>
+      ${st.q ? '<button class="btn" id="secall" style="width:fit-content">Buscar estas palabras en contratos de obra de todas las entidades</button>' : ''}`;
+    if (D.top.ok) contractTable($('#ctable'), D.top.rows);
+    bindNav(body); bindSecAll(st);
+    $('#secexport').innerHTML = '<button class="btn" id="seccsv">CSV de contratos</button><button class="btn" id="secxlsx">Excel del sector</button>';
+    const fname = `sector_${normTxt(S.v).replace(/[^A-Z]+/g, '_').toLowerCase()}_${st.y}`;
+    $('#seccsv').onclick = () => exportCSV(D.top.rows, fname + '.csv');
+    $('#secxlsx').onclick = () => {
+      if (!window.XLSX) return toast('No se pudo cargar la librería de Excel');
+      const wb = XLSX.utils.book_new(); const add = (nm, rows) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ nota: 'Sin datos' }]), nm);
+      add('Resumen', [{ sector: S.l, valor_secop: S.v, anio: st.y, orden: st.orden || 'Todos', palabras: st.q || '', contratos: n, valor: tot, pct_directa: tot ? dirV / tot : 0 }]);
+      add('Entidades', ents.map((e) => ({ entidad: e.nom, nit: e.nit_entidad, departamento: e.dep, contratos: num(e.n), valor: num(e.v) })));
+      add('Contratistas', provs.map((x) => ({ contratista: x.nom, documento: x.documento_proveedor, tipo: x.tipo, contratos: num(x.n), valor: num(x.v) })));
+      add('Departamentos', deps.map((d) => ({ departamento: d.departamento, contratos: num(d.n), valor: num(d.v) })));
+      add('Contratos', D.top.rows.map(flatRow));
+      add('Consultas', state.qlog.map((q) => ({ conjunto: q.ds, url: q.url, fecha: q.at, filas: q.n })));
+      saveFile(fname + '.xlsx', new Blob([XLSX.write(wb, { type: 'array', bookType: 'xlsx' })]));
+    };
+  }
+  function bindSecAll(st) { const b = $('#secall'); if (b) b.onclick = () => { state.obra = { q: st.q, dep: '', estado: 'todas' }; navTo('m5'); }; }
+
+  // ---------------------------------------------------------------- Módulos con página propia
+  function renderM3() {
+    setView(`<div class="stack"><span class="eyebrow">Módulo 03 · Detector de contratos sospechosos</span><h2>Nueve indicadores, todos explicables</h2>
+      <p class="lead muted">El detector funciona dentro de la ficha de cada entidad: busque una entidad y abra la pestaña de alertas. Cada indicador muestra los datos, el cálculo, el periodo, la fuente y las explicaciones legítimas posibles.</p>
+      <div class="grid3">${METHOD.map((m) => `<div class="card"><h3>${esc(m.t)}</h3><p class="muted" style="font-size:.9rem">${esc(m.d)}</p></div>`).join('')}</div>
+      <a class="btn primary" href="#inicio" style="width:fit-content">Buscar una entidad</a></div>`);
+  }
+  function renderM6() {
+    setView(`<div class="stack"><span class="eyebrow">Módulo 06 · Los dueños del Estado</span><h2>Perfiles de contratistas</h2>
+      <p class="lead muted">Busque un contratista por nombre o por NIT. El perfil reúne entidades contratantes, evolución anual, territorios, modalidades, participación como consorcio, representantes legales declarados en SECOP II y sanciones contractuales.</p>
+      <form id="m6form" class="searchbox" style="box-shadow:none;border:1.5px solid var(--line)"><input id="m6q" placeholder="Nombre de la empresa o NIT"><button type="submit">Buscar</button></form>
+      <div id="m6res" class="grid2"></div>
+      <div class="notice info"><b>Lo que no hace</b><span>No reconstruye socios ni beneficiarios finales: esa información está en el RUES y en el Registro Único de Beneficiarios Finales (DIAN), que no tienen consulta pública automatizable. No se inventan relaciones societarias.</span></div></div>`);
+    $('#m6form').onsubmit = async (e) => {
+      e.preventDefault(); const q = $('#m6q').value.trim(); if (!q) return; const res = $('#m6res'); res.innerHTML = '<p class="loading">Consultando…</p>';
+      const d = digits(q.split('-')[0]);
+      const p = /^\d{5,12}$/.test(d)
+        ? await part('contratos', { select: 'proveedor_adjudicado,documento_proveedor,tipodocproveedor,count(*) as n,sum(valor_del_contrato) as v', where: `starts_with(documento_proveedor, ${sqlStr(d)})`, group: 'proveedor_adjudicado,documento_proveedor,tipodocproveedor', order: 'sum(valor_del_contrato) DESC', limit: 20 })
+        : await textPart('contratos', { select: 'proveedor_adjudicado,documento_proveedor,tipodocproveedor,count(*) as n,sum(valor_del_contrato) as v', where: likeAll('proveedor_adjudicado', q) || '1=2', group: 'proveedor_adjudicado,documento_proveedor,tipodocproveedor', order: 'sum(valor_del_contrato) DESC', limit: 60 }, q);
+      if (p.ok && !/^\d{5,12}$/.test(d)) { const ws = searchWords(q); p.rows = p.rows.filter((x) => matchesAll(x.proveedor_adjudicado, ws)); }
+      res.innerHTML = provList(p); bindNav(res);
+    };
+  }
+  function renderM9() {
+    setView(`<div class="stack"><span class="eyebrow">Módulo 07 · La lupa de las sanciones</span><h2>Multas y sanciones contractuales</h2>
+      <p class="lead muted">Hoy el módulo consulta las multas, cláusulas penales, caducidades e incumplimientos que las entidades publican en SECOP I y SECOP II. Busque por NIT o documento del contratista.</p>
+      <form id="m9form" class="searchbox" style="box-shadow:none;border:1.5px solid var(--line)"><input id="m9q" placeholder="NIT o documento del contratista"><button type="submit">Buscar</button></form>
+      <div id="m9res" class="stack"></div>
+      <div class="card"><h3>Escala de estados que el sistema distingue</h3><div class="prose muted"><p>Denuncia → investigación → pliego de cargos → decisión de primera instancia → decisión ejecutoriada → sanción vigente o inhabilidad. Una investigación nunca se presenta como condena, ni un registro histórico como sanción vigente.</p><p>Antecedentes disciplinarios (Procuraduría, SIRI), responsabilidad fiscal (Contraloría, boletín de responsables fiscales) y decisiones judiciales (Rama Judicial) no están conectados: sus consultas públicas exigen documento de identidad y CAPTCHA, y RADAR no los evade. Desde la ficha se enlazan los certificados oficiales para consulta manual.</p></div>
+      <div class="row"><a class="btn" href="https://www.procuraduria.gov.co/Pages/Generacion-de-antecedentes.aspx" target="_blank" rel="noopener">Procuraduría ↗</a><a class="btn" href="https://www.contraloria.gov.co/web/guest/persona-natural" target="_blank" rel="noopener">Contraloría ↗</a><a class="btn" href="https://consultaprocesos.ramajudicial.gov.co/" target="_blank" rel="noopener">Rama Judicial ↗</a></div></div></div>`);
+    $('#m9form').onsubmit = async (e) => {
+      e.preventDefault(); const d = digits($('#m9q').value.split('-')[0]); const res = $('#m9res');
+      if (!/^\d{5,12}$/.test(d)) { res.innerHTML = '<p class="muted">Escriba un NIT o número de documento (solo números).</p>'; return; }
+      res.innerHTML = '<p class="loading">Consultando…</p>';
+      const [s1, ids] = await Promise.all([
+        part('multas1', { select: 'nombre_entidad,numero_de_resolucion,nombre_contratista,documento_contratista,numero_de_contrato,valor_sancion,fecha_de_firmeza,ruta_de_proceso', where: `starts_with(documento_contratista, ${sqlStr(d)})`, order: 'fecha_de_firmeza DESC', limit: 100 }),
+        part('contratos', { select: 'id_contrato', where: `starts_with(documento_proveedor, ${sqlStr(d)})`, order: 'fecha_de_firma DESC', limit: 300 }),
+      ]);
+      const list = ids.rows.map((r) => r.id_contrato).filter(Boolean);
+      const s2 = list.length ? await part('multas2', { select: 'id_contrato,nombre_entidad_creadora,nombre_proveedor_objeto_de,valor,valor_pagado,fecha_evento,numero_de_acto,tipo_de_sancion,estado,tipo', where: `id_contrato in (${list.slice(0, 120).map(sqlStr).join(',')})`, order: 'fecha_evento DESC', limit: 200 }) : { ok: true, rows: [], ds: 'multas2' };
+      res.innerHTML = `<div class="card"><h3>SECOP II</h3>${sancionesTable2(s2)}${qlink(s2)}${list.length > 120 ? '<p class="muted" style="font-size:.78rem">Se revisaron los 120 contratos más recientes del contratista.</p>' : ''}</div><div class="card"><h3>SECOP I</h3>${sancionesTable1(s1)}${qlink(s1)}</div>`;
+      bindNav(res);
+    };
+  }
+  const PENDING = {
+    m1: { t: '¿Quién puso a quién?', now: 'La red entidad → contratista → ordenador del gasto ya funciona dentro de cada ficha de entidad (pestaña Red) y de contratista.', need: ['Trayectoria de servidores públicos (SIGEP II): consulta pública por nombre, sin API; contiene datos personales que deben filtrarse.', 'Aportantes de campañas (Cuentas Claras, CNE): reportes descargables, sin API documentada.'] },
+  };
+  function renderModuleInfo(id) {
+    const m = MODS.find((x) => x.id === id); const p = PENDING[id];
+    setView(`<div class="stack"><span class="eyebrow">Módulo ${m.n}</span><h2>${esc(m.t)}</h2><span class="badge ${m.st}">${esc(m.stl)}</span>
+      <div class="card"><h3>Qué funciona hoy</h3><p>${esc(p.now)}</p></div>
+      <div class="card"><h3>Qué falta para completarlo</h3><ul class="prose">${p.need.map((x) => `<li>${esc(x)}</li>`).join('')}</ul><a href="#fuentes" class="btn" style="width:fit-content">Ver inventario de fuentes</a></div></div>`);
+  }
+
+  // ---------------------------------------------------------------- Metodología
+  const METHOD = [
+    { t: '1. Peso de la contratación directa', d: 'Participación de la contratación directa en el valor contratado, con y sin servicios profesionales. Media ≥ 30 % (sin servicios profesionales) o ≥ 70 % (total); alta ≥ 50 % sin servicios profesionales.' },
+    { t: '2. Concentración en pocos contratistas', d: 'Participación del primer y los cinco primeros contratistas, e índice HHI. Media: HHI ≥ 1.500 o primero ≥ 20 %; alta: HHI ≥ 2.500 o primero ≥ 35 %.' },
+    { t: '3. Contratistas recurrentes por contratación directa', d: 'Contratistas con 5 o más contratos directos que no son de servicios profesionales. Media con una empresa; alta con una empresa de 10 o más.' },
+    { t: '4. Posible fragmentación', d: '3 o más contratos de mínima cuantía o directos, mismo contratista, misma clase UNSPSC, en una ventana de 90 días. Alta con 5 o más.' },
+    { t: '5. Aceleración al cierre de gobierno', d: 'Promedio mensual firmado en oct–dic 2023 (territorial) y may–jul 2026 (nacional) frente a los meses previos. Media ≥ 2 veces, alta ≥ 3 veces.' },
+    { t: '6. Ventanas electorales', d: 'Contratación directa entre el 31 ene y el 21 jun 2026, y convenios interadministrativos entre el 29 jun y el 29 oct 2023 (Ley 996 de 2005). Media si existe alguno: se verifica la excepción legal.' },
+    { t: '7. Vencidos en ejecución', d: 'Contratos "En ejecución" con fecha de terminación vencida hace más de 90 días. Media desde 3, alta desde 20.' },
+    { t: '8. Pago rezagado', d: 'Contratos de $100 millones o más, vencidos hace más de 180 días, con menos del 50 % pagado según SECOP II. Media desde 2, alta desde 10.' },
+    { t: '9. Prórrogas', d: 'Contratos con días adicionados. Media si 15 % o más tienen prórroga o alguno supera 180 días; alta con 5 o más sobre 180 días.' },
+  ];
+  function renderMethod() {
+    setView(`<div class="stack"><span class="eyebrow">Metodología</span><h2>Cómo calcula RADAR sus señales</h2>
+      <div class="prose"><p class="lead">Todos los indicadores se calculan en su navegador con datos descargados en el momento desde la API oficial. Debajo de cada cifra está el enlace a la consulta exacta: ábrala y obtendrá los mismos datos.</p>
+      <p>Los umbrales son referencias de RADAR, no estándares legales. Se escogieron para producir pocas señales y explicables, y se publicarán con su historial de cambios. Señal media o alta significa "vale la pena preguntar", nunca "hay corrupción".</p></div>
+      <div class="grid3">${METHOD.map((m) => `<div class="card"><h3>${esc(m.t)}</h3><p class="muted" style="font-size:.9rem">${esc(m.d)}</p></div>`).join('')}</div>
+      <div class="card"><h3>Reglas de rigor</h3><ul class="prose"><li>Identificadores antes que nombres: entidades por NIT, contratistas por número de documento. Dos registros con el mismo nombre y distinto documento se muestran por separado.</li><li>No se muestran cuentas bancarias, números de cédula de servidores, domicilios ni datos sensibles que SECOP publica; de personas naturales contratistas solo se muestran los últimos 4 dígitos del documento.</li><li>Valor contratado no es presupuesto ejecutado. Pagos registrados en SECOP II pueden estar incompletos.</li><li>Sanciones en estado "A la espera de aprobación" no son decisiones en firme.</li><li>Cuando una fuente falla, se dice. No hay datos de relleno.</li></ul></div></div>`);
+  }
+
+  // ---------------------------------------------------------------- Fuentes
+  const SOURCES = [
+    { g: 'Contratación', n: 'SECOP II – Contratos Electrónicos', url: 'https://www.datos.gov.co/d/jbjy-vk9h', ep: '/resource/jbjy-vk9h.json', acc: 'API SODA (Socrata), pública', auth: 'No; token opcional para más cuota', freq: 'Diaria (metadato del portal)', cors: 'Sí', back: 'Opcional (caché y cuota)', st: 'live', k: 'contratos' },
+    { g: 'Contratación', n: 'SECOP Integrado (SECOP I y II)', url: 'https://www.datos.gov.co/d/rpmr-utcd', ep: '/resource/rpmr-utcd.json', acc: 'API SODA', auth: 'No', freq: 'Según portal', cors: 'Sí', back: 'Opcional', st: 'live', k: 'integrado' },
+    { g: 'Contratación', n: 'SECOP II – Procesos de Contratación', url: 'https://www.datos.gov.co/d/p6dx-8zbt', ep: '/resource/p6dx-8zbt.json', acc: 'API SODA', auth: 'No', freq: 'Según portal', cors: 'Sí', back: 'Opcional', st: 'ready', k: 'procesos', note: 'Verificado; aún no usado en indicadores (número de oferentes).' },
+    { g: 'Contratación', n: 'SECOP II – Modificaciones a contratos', url: 'https://www.datos.gov.co/d/cb9c-h8sn', ep: '/resource/cb9c-h8sn.json', acc: 'API SODA', auth: 'No', freq: 'Según portal', cors: 'Sí', back: 'Opcional', st: 'live', k: 'adiciones', note: 'No incluye valor de adiciones.' },
+    { g: 'Contratación', n: 'SECOP II – Ejecución de contratos', url: 'https://www.datos.gov.co/d/mfmm-jqmq', ep: '/resource/mfmm-jqmq.json', acc: 'API SODA', auth: 'No', freq: 'Según portal', cors: 'Sí', back: 'Opcional', st: 'live', k: 'ejecucion' },
+    { g: 'Sanciones', n: 'SECOP II – Multas y sanciones', url: 'https://www.datos.gov.co/d/it5q-hg94', ep: '/resource/it5q-hg94.json', acc: 'API SODA', auth: 'No', freq: 'Diaria (ficha de Colombia Compra)', cors: 'Sí', back: 'Opcional', st: 'live', k: 'multas2' },
+    { g: 'Sanciones', n: 'SECOP I – Multas y sanciones', url: 'https://www.datos.gov.co/d/4n4q-k399', ep: '/resource/4n4q-k399.json', acc: 'API SODA', auth: 'No', freq: 'Histórico', cors: 'Sí', back: 'Opcional', st: 'live', k: 'multas1' },
+    { g: 'Contratación', n: 'Tienda Virtual del Estado Colombiano', url: 'https://www.datos.gov.co/', ep: 'Por verificar', acc: 'Datos abiertos (por verificar)', auth: '—', freq: '—', cors: '—', back: '—', st: 'pend' },
+    { g: 'Electoral', n: 'Cuentas Claras – CNE', url: 'https://www.cnecuentasclaras.gov.co/', ep: 'Sin API', acc: 'Consulta web y reportes', auth: '—', freq: 'Por campaña', cors: 'No', back: 'Sí: descarga oficial', st: 'pend' },
+    { g: 'Electoral', n: 'Registraduría – resultados', url: 'https://www.registraduria.gov.co/', ep: 'Por verificar', acc: 'Descargas de resultados', auth: '—', freq: 'Por elección', cors: 'No', back: 'Sí', st: 'pend' },
+    { g: 'Servidores y empresas', n: 'SIGEP II – Función Pública', url: 'https://www.funcionpublica.gov.co/', ep: 'Sin API', acc: 'Consulta pública individual', auth: '—', freq: '—', cors: 'No', back: 'Solo enlace', st: 'pend' },
+    { g: 'Control', n: 'Procuraduría (SIRI), Contraloría (boletín), Rama Judicial', url: 'https://www.procuraduria.gov.co/', ep: 'Sin API', acc: 'Certificados con documento y CAPTCHA', auth: '—', freq: '—', cors: 'No', back: 'Solo enlace', st: 'pend' },
+  ];
+  function renderSources() {
+    setView(`<div class="stack"><span class="eyebrow">Fuentes y despliegue</span><h2>Qué está conectado de verdad</h2>
+      <p class="lead muted">"En vivo" significa que cada búsqueda consulta la API oficial en ese momento. La fecha de actualización es la que el portal reporta para el conjunto. Pulse "Comprobar ahora" para verificar desde su navegador.</p>
+      <button class="btn primary" id="recheck" style="width:fit-content">Comprobar ahora</button>
+      <div class="tablewrap"><table><thead><tr><th>Fuente</th><th>Acceso</th><th>Navegador (CORS)</th><th>Backend</th><th>Estado</th></tr></thead><tbody id="srcbody"></tbody></table></div>
+      <div class="card"><h3>Despliegue</h3><div class="prose"><p><b>Interfaz:</b> este archivo único (index.html) funciona en GitHub Pages sin compilación. La API de datos.gov.co admite consultas desde el navegador (CORS).</p><p><b>Backend opcional:</b> el proxy en FastAPI agrega caché, token de aplicación de Socrata y límites de uso. Para usarlo, abra la página con <span class="mono">?api=https://su-backend</span> o defina <span class="mono">window.RADAR_API_BASE</span>.</p><p>Base de datos en uso: <span class="mono">${esc(CFG.base)}</span></p></div></div></div>`);
+    const draw = () => {
+      $('#srcbody').innerHTML = SOURCES.map((s) => {
+        let badge;
+        if (s.k) { const m = state.meta[s.k]; badge = m?.updated ? `<span class="badge ok">En vivo · act. ${isoDay(m.updated)}</span>` : m?.error ? '<span class="badge alta">Inaccesible desde esta vista</span>' : s.st === 'ready' ? '<span class="badge part">Verificada, sin uso aún</span>' : '<span class="badge live">Conectada (sin comprobar)</span>'; }
+        else badge = '<span class="badge pend">No integrada</span>';
+        return `<tr class="srcrow"><td><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.n)}</a><span class="sub">${esc(s.g)} · <span class="mono">${esc(s.ep)}</span></span>${s.note ? `<span class="sub">${esc(s.note)}</span>` : ''}</td><td>${esc(s.acc)}<span class="sub">Autenticación: ${esc(s.auth)} · Frecuencia: ${esc(s.freq)}</span></td><td>${esc(s.cors)}</td><td>${esc(s.back)}</td><td>${badge}</td></tr>`;
+      }).join('');
+    };
+    draw();
+    $('#recheck').onclick = async () => {
+      $('#recheck').disabled = true;
+      await Promise.all(SOURCES.filter((s) => s.k).map(async (s) => {
+        try { const r = await fetch(`${CFG.base}/api/views/${DS[s.k].id}.json`); if (!r.ok) throw new Error('HTTP ' + r.status); const j = await r.json(); state.meta[s.k] = { updated: new Date(j.rowsUpdatedAt * 1000) }; }
+        catch (e) { state.meta[s.k] = { error: e.message }; }
+      }));
+      $('#recheck').disabled = false; draw(); toast('Comprobación terminada');
+    };
+  }
+
+  // ---------------------------------------------------------------- Exportaciones
+  async function saveFile(filename, data) {
+    const blob = data instanceof Blob ? data : new Blob([data]);
+    try {
+      if (window.claude && typeof window.claude.use === 'function') {
+        const dl = await window.claude.use('downloads');
+        if (dl) { await dl.save({ filename, data: blob }); toast('Archivo listo'); return; }
+      }
+    } catch (e) { if (e && e.code === 'declined') return; toast('No se pudo guardar el archivo en esta vista'); return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  }
+  const EXPORT_COLS = ['id_contrato', 'referencia_del_contrato', 'nombre_entidad', 'nit_entidad', 'departamento', 'ciudad', 'proveedor_adjudicado', 'documento_proveedor', 'tipodocproveedor', 'objeto_del_contrato', 'tipo_de_contrato', 'modalidad_de_contratacion', 'justificacion_modalidad_de', 'estado_contrato', 'fecha_de_firma', 'fecha_de_inicio_del_contrato', 'fecha_de_fin_del_contrato', 'valor_del_contrato', 'valor_pagado', 'dias_adicionados', 'urlproceso'];
+  const flatRow = (r) => Object.fromEntries(EXPORT_COLS.map((c) => [c, c === 'urlproceso' ? urlOf(r[c]) : r[c] ?? '']));
+  function exportCSV(rows, filename) {
+    if (!rows.length) return toast('No hay contratos para exportar');
+    const q = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+    const csv = '﻿' + [EXPORT_COLS.join(','), ...rows.map((r) => { const f = flatRow(r); return EXPORT_COLS.map((c) => q(f[c])).join(','); })].join('\r\n');
+    saveFile(filename, csv);
+  }
+  function exportXLSX(ctx) {
+    if (!window.XLSX) return toast('No se pudo cargar la librería de Excel');
+    const D = ctx.D; const wb = XLSX.utils.book_new();
+    const add = (name, rows) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ nota: 'Sin datos' }]), name);
+    add('Contratos', D.list.rows.map(flatRow));
+    if (ctx.kind === 'entidad') {
+      add('Contratistas', mergeProviders(D.prov.rows).map((x) => ({ documento: x.doc, tipo: x.tipo, nombre: x.nom, contratos: x.n, valor: x.v })));
+      add('Indicadores', ctx.ind.map((i) => ({ indicador: i.t, nivel: i.nivel, detectado: i.detect, calculo: i.calc || '', limitaciones: i.lim || '', fuente: (i.src || []).join(' ') })));
+      add('Por año', D.years.rows.map((r) => ({ anio: r.anio, contratos: num(r.n), valor: num(r.v), pagado: num(r.pagado) })));
+    } else {
+      add('Entidades', D.ents.rows.map((r) => ({ entidad: r.nom, nit: r.nit, departamento: r.dep, contratos: num(r.n), valor: num(r.v) })));
+    }
+    add('Consultas', state.qlog.map((q) => ({ conjunto: q.ds, url: q.url, fecha: q.at, filas: q.n })));
+    const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+    saveFile(`radar_${ctx.kind}_${ctx.nit || ctx.doc}.xlsx`, new Blob([out]));
+  }
+
+  // DOCX mínimo (WordprocessingML) generado en el navegador
+  function docxBlob(blocks) {
+    const x = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+    const run = (t, o = {}) => `<w:r><w:rPr>${o.b ? '<w:b/>' : ''}${o.color ? `<w:color w:val="${o.color}"/>` : ''}${o.sz ? `<w:sz w:val="${o.sz}"/>` : ''}</w:rPr><w:t xml:space="preserve">${x(t)}</w:t></w:r>`;
+    const para = (t, o = {}) => `<w:p><w:pPr>${o.spaceAfter != null ? `<w:spacing w:after="${o.spaceAfter}"/>` : ''}${o.ind ? `<w:ind w:left="${o.ind}" w:hanging="240"/>` : ''}</w:pPr>${Array.isArray(t) ? t.join('') : run(t, o)}</w:p>`;
+    const body = blocks.map((b) => {
+      if (b.t === 'h1') return para(b.text, { b: true, sz: 36, color: '6C3BFF', spaceAfter: 120 });
+      if (b.t === 'h2') return para(b.text, { b: true, sz: 26, color: '151522', spaceAfter: 80 });
+      if (b.t === 'meta') return para(b.text, { sz: 18, color: '5B5873' });
+      if (b.t === 'li') return para('• ' + b.text, { ind: 360 });
+      if (b.t === 'kv') return para([run(b.k + ': ', { b: true }), run(b.v)]);
+      if (b.t === 'table') {
+        const cell = (t, head) => `<w:tc><w:tcPr>${head ? '<w:shd w:val="clear" w:color="auto" w:fill="EEE8FF"/>' : ''}</w:tcPr><w:p>${run(t, { b: head, sz: 18 })}</w:p></w:tc>`;
+        return `<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders>${['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map((s) => `<w:${s} w:val="single" w:sz="4" w:color="E2DFEE"/>`).join('')}</w:tblBorders></w:tblPr>${[b.head, ...b.rows].map((r, i) => `<w:tr>${r.map((c) => cell(c, i === 0)).join('')}</w:tr>`).join('')}</w:tbl>` + para('');
+      }
+      return para(b.text);
+    }).join('');
+    const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1200" w:right="1200" w:bottom="1200" w:left="1200" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+    const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="21"/><w:lang w:val="es-CO"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="100" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults></w:styles>`;
+    const ct = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`;
+    const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
+    const drels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', ct); zip.file('_rels/.rels', rels); zip.file('word/document.xml', doc); zip.file('word/styles.xml', styles); zip.file('word/_rels/document.xml.rels', drels);
+    return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  }
+
+  function expedienteBlocks(ctx) {
+    const D = ctx.D; const P = D.period; const provs = mergeProviders(D.prov.rows); const tot = sum(provs, 'v');
+    const sig = ctx.ind.filter((i) => i.nivel === 'alta' || i.nivel === 'media');
+    const missing = [];
+    for (const [k, l] of [['list', 'contratos'], ['prov', 'contratistas'], ['modjust', 'modalidades'], ['multas2', 'sanciones SECOP II'], ['secop1', 'SECOP I']]) if (!D[k].ok) missing.push(`No fue posible consultar ${l}: ${D[k].err}`);
+    missing.push('Número de oferentes por proceso: pendiente de cruce con SECOP II Procesos.', 'Valor de las adiciones en dinero: SECOP II no lo publica en los conjuntos conectados.');
+    if (D.list.rows.length >= 1000) missing.push('El periodo tiene más de 1.000 contratos; los cálculos basados en la lista cubren los 1.000 más recientes.');
+    const preguntas = [...new Set(sig.flatMap((i) => i.preguntas || []))];
+    return {
+      preguntas,
+      blocks: [
+        { t: 'h1', text: 'Expediente de control político' },
+        { t: 'meta', text: `Elaborado con RADAR DEL PODER · consulta del ${new Date().toLocaleString('es-CO')} · fuente principal SECOP II (actualizada ${state.meta.contratos?.updated ? isoDay(state.meta.contratos.updated) : 'sin verificar'})` },
+        { t: 'h2', text: '1. Identificación de la consulta' },
+        { t: 'kv', k: 'Entidad', v: ctx.name || '' }, { t: 'kv', k: 'NIT', v: ctx.nit }, { t: 'kv', k: 'Periodo', v: `${P.from} a ${P.to}` },
+        { t: 'h2', text: '2. Resumen ejecutivo' },
+        { t: 'p', text: `En el periodo la entidad registró en SECOP II ${fmtN(sum(provs, 'n'))} contratos por ${fullCOP(tot)} con ${fmtN(provs.length)} contratistas distintos. De nueve indicadores de riesgo evaluados, ${sig.length} presentan señales que ameritan solicitar información. Ninguna señal constituye por sí misma prueba de irregularidad.` },
+        { t: 'h2', text: '3. Hallazgos verificables' },
+        ...ctx.ind.filter((i) => i.nivel !== 'nd').map((i) => ({ t: 'li', text: `${i.t}: ${i.detect}` })),
+        { t: 'h2', text: '4. Indicadores y cálculos' },
+        { t: 'table', head: ['Indicador', 'Nivel', 'Cálculo'], rows: ctx.ind.map((i) => [i.t, { alta: 'Alta', media: 'Media', sin: 'Sin señal', nd: 'Sin datos' }[i.nivel], i.calc || '—']) },
+        { t: 'h2', text: '5. Principales contratistas' },
+        { t: 'table', head: ['Contratista', 'Documento', 'Contratos', 'Valor', 'Participación'], rows: provs.slice(0, 15).map((x) => [x.nom, maskDoc(x.doc, x.tipo), fmtN(x.n), fullCOP(x.v), fmtPct(tot ? x.v / tot : 0)]) },
+        { t: 'h2', text: '6. Documentos y enlaces originales' },
+        ...[...new Set(ctx.ind.flatMap((i) => i.src || []))].map((u) => ({ t: 'li', text: u })),
+        { t: 'h2', text: '7. Alertas que requieren investigación' },
+        ...(sig.length ? sig.map((i) => ({ t: 'li', text: `${i.t} (señal ${i.nivel}). Limitaciones: ${i.lim} Para confirmar: ${i.confirmar}` })) : [{ t: 'p', text: 'Ningún indicador presentó señal en el periodo.' }]),
+        { t: 'h2', text: '8. Información faltante' },
+        ...missing.map((m) => ({ t: 'li', text: m })),
+        { t: 'h2', text: '9. Preguntas para la entidad' },
+        ...preguntas.map((p, i) => ({ t: 'p', text: `${i + 1}. ${p}` })),
+        { t: 'h2', text: '10. Fecha de consulta y actualización de fuentes' },
+        { t: 'table', head: ['Conjunto', 'Consulta', 'Fecha'], rows: state.qlog.slice(-40).map((q) => [q.ds, q.url, q.at]) },
+      ],
+    };
+  }
+  function exportExpediente(ctx) { if (!window.JSZip) return toast('No se pudo cargar el generador de Word'); docxBlob(expedienteBlocks(ctx).blocks).then((b) => saveFile(`expediente_${ctx.nit}_${ctx.D.period.k}.docx`, b)); }
+
+  function peticionText(ctx, f) {
+    const { preguntas } = expedienteBlocks(ctx);
+    return `${f.ciudad || '[Ciudad]'}, ${new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}
+
+Señores
+${ctx.name || '[Entidad]'}
+NIT ${ctx.nit}
+E. S. D.
+
+Asunto: Derecho de petición de información y documentos
+
+${f.nombre || '[Nombre completo]'}, identificado(a) con cédula de ciudadanía ${f.cc || '[número]'}, en ejercicio del derecho fundamental de petición consagrado en el artículo 23 de la Constitución Política, regulado por la Ley 1755 de 2015, y del derecho de acceso a la información pública de la Ley 1712 de 2014, respetuosamente solicito:
+
+${preguntas.map((p, i) => `${i + 1}. ${p}`).join('\n\n')}
+
+Fundamento de la solicitud: la información registrada por la entidad en el Sistema Electrónico de Contratación Pública (SECOP II), consultada el ${isoDay(new Date())} en datos.gov.co, presenta los patrones descritos, que requieren aclaración para el ejercicio del control ciudadano.
+
+Conforme al numeral 1 del artículo 14 de la Ley 1437 de 2011, sustituido por la Ley 1755 de 2015, las peticiones de documentos e información deben resolverse dentro de los diez (10) días siguientes a su recepción.
+
+Recibiré respuesta en: ${f.correo || '[correo electrónico]'}
+
+Atentamente,
+
+
+${f.nombre || '[Nombre completo]'}
+C.C. ${f.cc || '[número]'}
+`;
+  }
+  function expedientePanel(ctx) {
+    return `<div class="grid2"><div class="card"><h3>Expediente de control político</h3><p class="muted">Documento Word con los diez apartados: identificación, resumen, hallazgos, cálculos, tablas, enlaces, alertas, información faltante, preguntas y fechas de consulta.</p><div class="row"><button class="btn lime" id="xdoc2">Descargar expediente (.docx)</button><button class="btn" id="xxlsx2">Datos en Excel</button></div></div>
+      <div class="card"><h3>Derecho de petición</h3><p class="muted">Las preguntas salen de las señales y vacíos detectados. Complete sus datos (no se guardan ni se envían a ningún lado).</p>
+      <div class="formgrid"><label class="field"><span>Nombre</span><input id="pnom" autocomplete="name"></label><label class="field"><span>Cédula</span><input id="pcc" inputmode="numeric"></label><label class="field"><span>Ciudad</span><input id="pciu"></label><label class="field"><span>Correo para respuesta</span><input id="pmail" type="email" autocomplete="email"></label></div></div></div>
+      <div class="card"><label class="field"><span class="eyebrow">Texto del derecho de petición</span><textarea id="ptext"></textarea></label><div class="row"><button class="btn primary" id="pcopy">Copiar texto</button><button class="btn" id="pdoc">Descargar en Word</button></div></div>`;
+  }
+  function bindExpediente(ctx) {
+    const upd = () => { $('#ptext').value = peticionText(ctx, { nombre: $('#pnom').value, cc: $('#pcc').value, ciudad: $('#pciu').value, correo: $('#pmail').value }); };
+    ['#pnom', '#pcc', '#pciu', '#pmail'].forEach((s) => ($(s).oninput = upd)); upd();
+    $('#xdoc2').onclick = () => exportExpediente(ctx); $('#xxlsx2').onclick = () => exportXLSX(ctx);
+    $('#pcopy').onclick = () => { const t = $('#ptext'); navigator.clipboard?.writeText(t.value).then(() => toast('Texto copiado'), () => { t.select(); toast('Seleccionado: copie con Ctrl+C'); }) ?? (t.select(), toast('Seleccionado: copie con Ctrl+C')); };
+    $('#pdoc').onclick = () => { if (!window.JSZip) return toast('No se pudo cargar el generador de Word'); docxBlob($('#ptext').value.split('\n').map((l) => ({ t: 'p', text: l }))).then((b) => saveFile(`derecho_de_peticion_${ctx.nit}.docx`, b)); };
+  }
+
+  // ---------------------------------------------------------------- Radar animado
+  function radar() {
+    const cv = $('#radar'); if (!cv) return; const g = cv.getContext('2d'); const W = cv.width, C = W / 2;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const blips = Array.from({ length: 14 }, () => ({ a: Math.random() * Math.PI * 2, r: 60 + Math.random() * 230, t: -1 }));
+    let ang = 0; let raf;
+    const frame = () => {
+      g.clearRect(0, 0, W, W);
+      g.strokeStyle = 'rgba(108,59,255,.55)'; g.lineWidth = 1;
+      for (let r = 60; r <= 300; r += 60) { g.beginPath(); g.arc(C, C, r, 0, Math.PI * 2); g.stroke(); }
+      g.beginPath(); g.moveTo(C - 300, C); g.lineTo(C + 300, C); g.moveTo(C, C - 300); g.lineTo(C, C + 300); g.stroke();
+      const grad = g.createConicGradient ? g.createConicGradient(ang - 0.6, C, C) : null;
+      if (grad) { grad.addColorStop(0, 'rgba(201,255,54,0)'); grad.addColorStop(0.095, 'rgba(201,255,54,.28)'); grad.addColorStop(0.1, 'rgba(201,255,54,0)'); g.fillStyle = grad; g.beginPath(); g.arc(C, C, 300, 0, Math.PI * 2); g.fill(); }
+      g.strokeStyle = 'rgba(201,255,54,.9)'; g.lineWidth = 2; g.beginPath(); g.moveTo(C, C); g.lineTo(C + 300 * Math.cos(ang), C + 300 * Math.sin(ang)); g.stroke();
+      for (const b of blips) {
+        const d = ((ang - b.a) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+        if (d < 0.05) b.t = 1;
+        if (b.t > 0) { g.fillStyle = `rgba(255,92,103,${b.t})`; g.beginPath(); g.arc(C + b.r * Math.cos(b.a), C + b.r * Math.sin(b.a), 4, 0, Math.PI * 2); g.fill(); b.t -= 0.006; }
+      }
+      ang = (ang + 0.012) % (Math.PI * 2);
+      if (!reduce && !document.hidden) raf = requestAnimationFrame(frame);
+    };
+    if (reduce) { blips.forEach((b) => (b.t = 0.7)); frame(); return; }
+    frame();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) { cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); } });
+  }
+
+  // ---------------------------------------------------------------- Arranque
+  function theme() {
+    const root = document.documentElement; let t = null;
+    try { t = localStorage.getItem('radar-theme'); } catch (_) { /* almacenamiento bloqueado */ }
+    if (t) root.dataset.theme = t;
+    $('#themebtn').onclick = () => {
+      const cur = root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      const next = cur === 'dark' ? 'light' : 'dark'; root.dataset.theme = next;
+      try { localStorage.setItem('radar-theme', next); } catch (_) { /* sin persistencia */ }
+    };
+  }
+  function init() {
+    theme(); radar();
+    $('#searchform').onsubmit = (e) => { e.preventDefault(); doSearch($('#q').value); };
+    $('#modechips').onclick = (e) => { const b = e.target.closest('[data-mode]'); if (!b) return; state.mode = b.dataset.mode; $$('#modechips .chip').forEach((c) => { c.classList.toggle('on', c === b); c.setAttribute('aria-checked', c === b); }); };
+    $$('[data-ex]').forEach((b) => (b.onclick = () => { $('#q').value = b.dataset.ex; doSearch(b.dataset.ex); }));
+    window.addEventListener('hashchange', route);
+    route();
+    probe();
+    // Enlaces compartibles en el despliegue web (?q=, ?nit=, ?doc=, ?contrato=)
+    if (params.get('nit')) openEntity(params.get('nit'));
+    else if (params.get('doc')) openProvider(params.get('doc'));
+    else if (params.get('contrato')) openContract(params.get('contrato'));
+    else if (params.get('q')) { $('#q').value = params.get('q'); doSearch(params.get('q')); }
+  }
+  // Exponer funciones puras para pruebas automatizadas
+  window.__RADAR_TEST__ = { sectorMatch, sectorOf, likeAll, searchWords, matchesAll, classify, fragmentation, mergeProviders, indicatorsEntity, deptOf, deptExact, docxBlob, buildUrl, expedienteBlocks, peticionText };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+
+</script>
