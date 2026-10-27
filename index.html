@@ -189,6 +189,10 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
 .alert dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 520px) { .alert dl { grid-template-columns: 1fr; } }
 
+.roleline { margin: 3px 0; font-size: .86rem; line-height: 1.4; }
+.roleline .badge { margin-right: 4px; }
+.searched { font-size: .85rem; }
+.searched li { margin: 2px 0; }
 .qlink { font-family: var(--f-mono); font-size: .72rem; color: var(--muted); overflow-wrap: anywhere; }
 .qlink a { color: var(--muted); }
 .panel-err { border: 1px dashed var(--coral); border-radius: 10px; padding: 10px 12px; font-size: var(--s-sm); display: flex; flex-direction: column; gap: 4px; }
@@ -308,13 +312,14 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
     <p class="tag">El poder deja huellas. <em>Encuéntralas.</em></p>
     <form class="searchbox" id="searchform" role="search">
       <label for="q" class="sr" hidden>Buscar</label>
-      <input id="q" name="q" type="search" autocomplete="off" placeholder="Alcaldía, empresa, NIT, contrato CO1.PCCNTR…, departamento o sector">
+      <input id="q" name="q" type="search" autocomplete="off" placeholder="Persona, alcaldía, empresa, cédula o NIT, contrato CO1.PCCNTR…, departamento o sector">
       <button type="submit">Buscar</button>
     </form>
     <div class="chips" id="modechips" role="radiogroup" aria-label="Tipo de búsqueda">
       <button type="button" class="chip on" data-mode="auto" role="radio" aria-checked="true">Detectar</button>
       <button type="button" class="chip" data-mode="entidad" role="radio" aria-checked="false">Entidad pública</button>
       <button type="button" class="chip" data-mode="proveedor" role="radio" aria-checked="false">Contratista</button>
+      <button type="button" class="chip" data-mode="persona" role="radio" aria-checked="false">Persona / funcionario</button>
       <button type="button" class="chip" data-mode="obra" role="radio" aria-checked="false">Obra</button>
       <button type="button" class="chip" data-mode="contrato" role="radio" aria-checked="false">Nº de contrato</button>
     </div>
@@ -330,7 +335,7 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
 <footer class="footer">
   <div class="wrap stack">
     <p>RADAR DEL PODER consulta datos abiertos oficiales. Una alerta es una señal para investigar, no una prueba de ilegalidad ni de corrupción. Cada cifra enlaza a la consulta original para que pueda reproducirla.</p>
-    <p class="mono">Fuente principal: Colombia Compra Eficiente · SECOP II y SECOP Integrado vía datos.gov.co (API Socrata/SODA).</p>
+    <p class="mono">Fuentes: Colombia Compra Eficiente (SECOP II y SECOP Integrado) y Función Pública (Personas Expuestas Políticamente, SIGEP) y CNE (Cuentas Claras 2019), vía datos.gov.co (API Socrata/SODA).</p>
   </div>
 </footer>
 
@@ -362,6 +367,14 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
     ejecucion: { id: 'mfmm-jqmq', nombre: 'SECOP II – Ejecución de contratos' },
     multas2: { id: 'it5q-hg94', nombre: 'SECOP II – Multas y sanciones' },
     multas1: { id: '4n4q-k399', nombre: 'SECOP I – Multas y sanciones' },
+    pep: { id: '3qxn-uc22', nombre: 'Función Pública – Personas Expuestas Políticamente (SIGEP)' },
+    arch21: { id: 'f8va-cf4m', nombre: 'SECOP II – Archivos (hasta 2021)' },
+    arch22: { id: 'kgcd-kt7i', nombre: 'SECOP II – Archivos 2022' },
+    arch23: { id: '3skv-9na7', nombre: 'SECOP II – Archivos 2023' },
+    arch24: { id: 'nbae-kzan', nombre: 'SECOP II – Archivos 2024' },
+    arch25: { id: 'h4m3-b4e2', nombre: 'SECOP II – Archivos 2025' },
+    arch26: { id: 'dmgg-8hin', nombre: 'SECOP II – Archivos 2026' },
+    cne19: { id: 'jgra-rz2t', nombre: 'CNE – Cuentas Claras, ingresos de campañas 2019' },
   };
 
   const TODAY = new Date();
@@ -408,6 +421,104 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
     if (!ws.length) return null;
     // Las vocales se vuelven comodín de un carácter para tolerar tildes (Í, Á…) presentes en los datos.
     return ws.map((w) => { const pat = `'%${w.replace(/[AEIOU]/g, '_')}%'`; const ors = fields.map((f) => `upper(${f}) like ${pat}`); return ors.length > 1 ? `(${ors.join(' OR ')})` : ors[0]; }).join(' AND ');
+  }
+  // ---------------------------------------------------------------- Búsqueda tolerante de nombres
+  // Forma "suelta" de un nombre: sin tildes ni H y con letras que se confunden unificadas (V/B, Z/S, Y/I).
+  const LOOSE = (s) => normTxt(s).replace(/[^A-Z0-9 ]/g, ' ').replace(/H/g, '').replace(/V/g, 'B').replace(/Z/g, 'S').replace(/Y/g, 'I').replace(/\s+/g, ' ').trim();
+  // Patrón LIKE: vocales y letras ambiguas son comodín de un carácter; la H puede no estar.
+  const loosePat = (w) => ('%' + w.replace(/H/g, '%').replace(/[AEIOUYZSVBN]/g, '_') + '%').replace(/%+/g, '%');
+  function likeLoose(fields, ws) {
+    const fs = Array.isArray(fields) ? fields : [fields];
+    return ws.map((w) => { const pat = sqlStr(loosePat(w)); const ors = fs.map((f) => `upper(${f}) like ${pat}`); return ors.length > 1 ? `(${ors.join(' OR ')})` : ors[0]; }).join(' AND ');
+  }
+  const nameHits = (text, ws) => { const t = LOOSE(text); return ws.filter((w) => { const lw = LOOSE(w); return lw && t.includes(lw); }).length; };
+  const ORG_WORDS = new Set(['ALCALDIA', 'MUNICIPIO', 'MUNICIPAL', 'GOBERNACION', 'DEPARTAMENTO', 'DEPARTAMENTAL', 'DISTRITO', 'DISTRITAL', 'MINISTERIO', 'AGENCIA', 'UNIDAD', 'INSTITUTO', 'SECRETARIA', 'SUPERINTENDENCIA', 'NACIONAL', 'EMPRESA', 'EMPRESAS', 'SAS', 'LTDA', 'CONSORCIO', 'UNION', 'TEMPORAL', 'FUNDACION', 'CORPORACION', 'ASOCIACION', 'COOPERATIVA', 'HOSPITAL', 'ESE', 'UNIVERSIDAD', 'BANCO', 'FONDO', 'SERVICIOS', 'INGENIERIA', 'CONSTRUCCIONES', 'CONSTRUCTORA', 'GRUPO', 'COMPANIA', 'INVERSIONES', 'COLOMBIA', 'SOCIEDAD', 'SA', 'SAS', 'S.A.S', 'OBRA', 'CONTRATO', 'SECTOR', 'AGRICULTURA', 'POLICIA', 'EJERCITO', 'FISCALIA', 'CONTRALORIA', 'PROCURADURIA', 'REGISTRADURIA', 'CONCEJO', 'ASAMBLEA', 'CAMARA', 'SENADO']);
+  function looksLikePerson(text) {
+    if (/\d/.test(text)) return false;
+    const ws = normTxt(text).replace(/[^A-Z ]/g, ' ').split(/\s+/).filter(Boolean);
+    if (ws.length < 2 || ws.length > 6) return false;
+    return !ws.some((w) => ORG_WORDS.has(w));
+  }
+  // Planes de búsqueda: 1) todas las palabras; 2) quitando una palabra a la vez (nombre mal escrito, segundo
+  // nombre o apellido que no está en la fuente); 3) índice de texto con la palabra más larga y filtro tolerante.
+  function namePlans(ws, useQ, light) {
+    const plans = [{ like: ws, q: ws, min: ws.length }];
+    if (ws.length >= 3) {
+      const order = [...new Set([1, ws.length - 1, 0, ...ws.map((_, i) => i)])].slice(0, light ? 2 : 4);
+      for (const i of order) { const sub = ws.filter((_, j) => j !== i); plans.push({ like: sub, q: sub, min: ws.length - 1, drop: ws[i] }); }
+    }
+    if (useQ && !light && ws.length >= 2) { const longest = [...ws].sort((a, b) => b.length - a.length)[0]; plans.push({ like: ws, q: [longest], min: ws.length }); }
+    return useQ ? plans : plans.filter((p) => p.q.length === p.like.length).map((p) => ({ ...p, q: null }));
+  }
+  // Ejecuta los planes en orden hasta encontrar coincidencias. Distingue "sin coincidencias" de "la fuente no respondió".
+  async function nameSearch(dsKey, fields, p, ws, key, useQ = true, light = false) {
+    let fails = 0; let lastErr = null; let lastOk = null;
+    for (const plan of namePlans(ws, useQ, light)) {
+      const w = likeLoose(fields, plan.like);
+      const params = { ...p, where: p.where ? `(${p.where}) AND ${w}` : w };
+      if (plan.q) params.q = plan.q.map((x) => x.toLowerCase()).join(' ');
+      const r = await part(dsKey, params);
+      if (!r.ok) { fails++; lastErr = r; continue; }
+      lastOk = r;
+      const rows = r.rows.map((x) => ({ ...x, _hits: nameHits(x[key], ws) })).filter((x) => x._hits >= plan.min).sort((a, b) => b._hits - a._hits);
+      if (rows.length) return { ...r, rows, partial: plan.min < ws.length, drop: plan.drop || null, fails };
+    }
+    if (lastOk) return { ...lastOk, rows: [], fails, err: lastErr ? lastErr.err : null };
+    return lastErr || { ok: true, rows: [], ds: dsKey, fails: 0 };
+  }
+  // Roles de personas en SECOP II: quienes supervisan u ordenan el gasto suelen ser servidores públicos.
+  const ROLES = [
+    { k: 'og', l: 'Ordenador(a) del gasto', nom: 'nombre_ordenador_del_gasto', doc: 'n_mero_de_documento_ordenador_del_gasto' },
+    { k: 'sup', l: 'Supervisor(a) de contratos', nom: 'nombre_supervisor', doc: 'n_mero_de_documento_supervisor' },
+    { k: 'op', l: 'Ordenador(a) de pago', nom: 'nombre_ordenador_de_pago', doc: 'n_mero_de_documento_ordenador_de_pago' },
+    { k: 'rl', l: 'Representante legal de contratista', nom: 'nombre_representante_legal', doc: 'identificaci_n_representante_legal' },
+  ];
+  function roleSelect(R) {
+    if (R.k === 'rl') return { select: `${R.nom} as nom,${R.doc} as doc,proveedor_adjudicado as emp,documento_proveedor as edoc,count(*) as n,sum(valor_del_contrato) as v,min(fecha_de_firma) as f1,max(fecha_de_firma) as f2`, group: `${R.nom},${R.doc},proveedor_adjudicado,documento_proveedor`, order: 'count(*) DESC', limit: 150 };
+    return { select: `${R.nom} as nom,${R.doc} as doc,nombre_entidad as ent,nit_entidad as nit,count(*) as n,sum(valor_del_contrato) as v,min(fecha_de_firma) as f1,max(fecha_de_firma) as f2`, group: `${R.nom},${R.doc},nombre_entidad,nit_entidad`, order: 'count(*) DESC', limit: 150 };
+  }
+  const PEP_FIELDS = 'numero_documento,nombre_pep,denominacion_cargo,nombre_entidad,fecha_vinculacion,fecha_desvinculacion,enlace_hoja_vida_sigep';
+  const SIGEP_URL = 'https://www.funcionpublica.gov.co/web/sigep2/directorio';
+  const yr = (d) => (d ? String(d).slice(0, 4) : '');
+  const span = (a, b) => { const x = yr(a), y = yr(b); return x && y ? (x === y ? x : `${x}–${y}`) : x || y || ''; };
+  const hvLink = (r) => { const u = urlOf(r.enlace_hoja_vida_sigep); return u && !/0-0-0$/.test(u) ? ` <a href="${esc(u)}" target="_blank" rel="noopener">Hoja de vida SIGEP ↗</a>` : ''; };
+  // Une registros del listado PEP y de roles en SECOP en una sola persona (por documento; si no hay, por nombre).
+  function buildPeople(pepRows, roleParts) {
+    const m = new Map();
+    const keyOf = (doc, nom) => { const d = digits(doc); return d.length >= 5 && !/^0+$/.test(d) ? 'D' + d : 'N' + LOOSE(nom); };
+    const get = (doc, nom, hits) => {
+      const k = keyOf(doc, nom); let p = m.get(k);
+      if (!p) { p = { key: k, doc: k[0] === 'D' ? k.slice(1) : '', names: new Map(), pep: [], roles: [], hits: 0 }; m.set(k, p); }
+      if (nom && !p.names.has(LOOSE(nom))) p.names.set(LOOSE(nom), String(nom).trim()); p.hits = Math.max(p.hits, hits || 0); return p;
+    };
+    for (const r of pepRows) get(r.numero_documento, r.nombre_pep, r._hits).pep.push(r);
+    for (const [R, prt] of roleParts) for (const r of (prt && prt.rows) || []) {
+      if (/no definido|sin descrip/i.test(r.nom || '')) continue;
+      if (R.k === 'rl' && (digits(r.edoc) === digits(r.doc) || LOOSE(r.emp) === LOOSE(r.nom))) continue;
+      get(r.doc, r.nom, r._hits).roles.push({ ...r, R });
+    }
+    // Registros sin documento se unen a la persona con documento que tenga el mismo nombre
+    for (const [k, p] of [...m]) {
+      if (k[0] !== 'N') continue;
+      const twin = [...m.values()].find((o) => o.key[0] === 'D' && o.names.has(k.slice(1)));
+      if (twin) { twin.pep.push(...p.pep); twin.roles.push(...p.roles); m.delete(k); }
+    }
+    return [...m.values()].sort((a, b) => b.hits - a.hits || b.pep.length - a.pep.length || sum(b.roles, 'n') - sum(a.roles, 'n'));
+  }
+  function partialNote(prts) {
+    const drops = [...new Set(prts.filter((p) => p && p.partial && p.drop).map((p) => p.drop))];
+    return drops.length ? `<p class="muted" style="font-size:.82rem">Coincidencia parcial: no se encontraron registros con todas las palabras; se muestran los que coinciden sin «${esc(drops.join('», «'))}». Verifique que sea la misma persona por el documento.</p>` : '';
+  }
+  // Resumen de qué fuentes se consultaron y con qué resultado
+  function searchedCard(items, total, isDoc) {
+    const line = ([label, p, n]) => {
+      if (!p) return '';
+      if (!p.ok) return `<li>${esc(label)}: <b>la fuente no respondió</b>${p.status ? ' (HTTP ' + p.status + ')' : ''}. No significa que no haya registros.</li>`;
+      const extra = p.fails ? ' (algunas variantes de la búsqueda no respondieron)' : '';
+      return `<li>${esc(label)}: ${n ? fmtN(n) + ' coincidencia(s)' : 'sin coincidencias'}${extra}.</li>`;
+    };
+    const tips = total ? '' : `<p class="muted" style="font-size:.85rem">Si está seguro de que la persona o empresa existe: búsquela por <b>número de documento</b> (cédula o NIT), que es exacto. Puede figurar con otro nombre en SECOP (sin segundo apellido, con abreviaturas o errores de digitación). Para servidores públicos que no son PEP, consulte el <a href="${SIGEP_URL}" target="_blank" rel="noopener">directorio del SIGEP ↗</a>, que no tiene API abierta.</p>`;
+    return `<div class="card searched" style="grid-column:1/-1"><h3>Qué se consultó</h3><ul class="prose">${items.map(line).join('')}</ul>${tips}<p class="muted" style="font-size:.78rem">${isDoc ? 'Búsqueda exacta por documento.' : 'La búsqueda ignora tildes, tolera H, V/B, Z/S, Y/I y, si no hay resultados con todas las palabras, prueba quitando una a la vez.'} Funcionarios: se cubren los registrados como Personas Expuestas Políticamente en el SIGEP y quienes figuran en SECOP II como supervisores, ordenadores del gasto o de pago. Los demás servidores de planta no están en datos abiertos.</p></div>`;
   }
   const periodWhere = (field, p) => `${field} between '${p.from}T00:00:00' and '${p.to}T23:59:59'`;
   const isCompanyDoc = (t) => /NIT/i.test(t || '');
@@ -493,7 +604,7 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
   // ---------------------------------------------------------------- Estado de conexión
   async function probe() {
     const strip = $('#statusstrip');
-    const ids = ['contratos', 'integrado', 'multas2'];
+    const ids = ['contratos', 'integrado', 'pep'];
     const out = [];
     let anyOk = false;
     await Promise.all(ids.map(async (k) => {
@@ -640,27 +751,60 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
     const res = $('#res');
     if (kind === 'doc') {
       const n = digits(q.split('-')[0]);
-      $('#kindline').textContent = 'Parece un NIT o número de documento. Se busca como entidad contratante y como contratista.';
-      const [ent, prov] = await Promise.all([
-        part('contratos', { select: 'nombre_entidad,nit_entidad,departamento,ciudad,count(*) as n,sum(valor_del_contrato) as v', where: `nit_entidad=${n}`, group: 'nombre_entidad,nit_entidad,departamento,ciudad', order: 'count(*) DESC', limit: 10 }),
+      $('#kindline').textContent = 'Parece una cédula, NIT o número de documento. Se busca como entidad, contratista (SECOP I y II) y persona en función pública.';
+      const [ent, prov, prov1, pep, ...roles] = await Promise.all([
+        part('contratos', { select: 'nombre_entidad,nit_entidad,departamento,ciudad,count(*) as n,sum(valor_del_contrato) as v', where: `nit_entidad=${sqlStr(n)}`, group: 'nombre_entidad,nit_entidad,departamento,ciudad', order: 'count(*) DESC', limit: 10 }),
         part('contratos', { select: 'proveedor_adjudicado,documento_proveedor,tipodocproveedor,count(*) as n,sum(valor_del_contrato) as v', where: `starts_with(documento_proveedor, ${sqlStr(n)})`, group: 'proveedor_adjudicado,documento_proveedor,tipodocproveedor', order: 'sum(valor_del_contrato) DESC', limit: 20 }),
+        part('integrado', { select: 'nom_raz_social_contratista as nom,documento_proveedor as doc,tipo_documento_proveedor as tipo,origen,count(*) as n,sum(valor_contrato) as v', where: `starts_with(documento_proveedor, ${sqlStr(n)})`, group: 'nom_raz_social_contratista,documento_proveedor,tipo_documento_proveedor,origen', limit: 40 }),
+        part('pep', { select: PEP_FIELDS, where: `numero_documento=${n}`, limit: 50 }),
+        ...ROLES.map((R) => part('contratos', { ...roleSelect(R), where: `${R.doc}=${sqlStr(n)}` })),
       ]);
-      prov.rows = prov.rows.filter((r) => { const d = digits(r.documento_proveedor); return d === n || (d.length === n.length + 1 && d.startsWith(n)); });
-      res.innerHTML = entList(ent) + provList(prov);
+      const okDoc = (d) => { const x = digits(d); return x === n || (x.length === n.length + 1 && x.startsWith(n)); };
+      prov.rows = prov.rows.filter((r) => okDoc(r.documento_proveedor));
+      prov1.rows = prov1.rows.filter((r) => okDoc(r.doc));
+      const people = buildPeople(pep.rows, ROLES.map((R, i) => [R, roles[i]]));
+      const nRoles = sum(roles, (r) => r.rows.length);
+      res.innerHTML = (people.length ? personList(people, [pep, ...roles], new Set(prov.rows.map((r) => digits(r.documento_proveedor)))) : '') + entList(ent) + provList(prov) + provList1(prov1)
+        + searchedCard([['Entidades contratantes (SECOP II)', ent, ent.rows.length], ['Contratistas SECOP II', prov, prov.rows.length], ['Contratistas SECOP I y II (Integrado)', prov1, prov1.rows.length], ['Personas Expuestas Políticamente (SIGEP)', pep, pep.rows.length], ...ROLES.map((R, i) => [`${R.l} (SECOP II)`, roles[i], roles[i].rows.length])], ent.rows.length + prov.rows.length + prov1.rows.length + pep.rows.length + nRoles, true);
     } else {
-      const showEnt = mode === 'auto' || mode === 'entidad';
-      const showProv = mode === 'auto' || mode === 'proveedor';
-      $('#kindline').textContent = 'Búsqueda por nombre. Las tildes no importan; las palabras genéricas como "alcaldía" o "municipio" se usan solo si no hay otras.';
-      const jobs = [];
-      const we = likeAll('nombre_entidad', q); const wp = likeAll('proveedor_adjudicado', q); const wo = likeAll('objeto_del_contrato', q);
       const ws = searchWords(q);
+      if (!ws.length) { res.innerHTML = '<p class="muted">Escriba al menos una palabra con dos letras o más.</p>'; return; }
+      const person = mode === 'persona' || (mode === 'auto' && looksLikePerson(q));
+      const showEnt = mode === 'entidad' || (mode === 'auto' && !person);
+      const showProv = mode === 'auto' || mode === 'proveedor' || mode === 'persona';
+      $('#kindline').textContent = person
+        ? 'Búsqueda de persona: como contratista (SECOP I y II), como funcionario registrado en el SIGEP y como supervisor u ordenador del gasto en SECOP II. Las tildes no importan.'
+        : 'Búsqueda por nombre. Las tildes no importan; las palabras genéricas como "alcaldía" o "municipio" se usan solo si no hay otras.';
+      const we = likeAll('nombre_entidad', q); const wo = likeAll('objeto_del_contrato', q);
       const refine = (r, field, n) => { if (r.ok) r.rows = r.rows.filter((x) => matchesAll(x[field], ws)).slice(0, n); return r; };
-      if (showEnt && we) jobs.push(textPart('contratos', { select: 'nombre_entidad,nit_entidad,departamento,ciudad,count(*) as n,sum(valor_del_contrato) as v', where: we, group: 'nombre_entidad,nit_entidad,departamento,ciudad', order: 'count(*) DESC', limit: 60 }, q).then((r) => ['ent', refine(r, 'nombre_entidad', 12)]));
-      if (showProv && wp) jobs.push(textPart('contratos', { select: 'proveedor_adjudicado,documento_proveedor,tipodocproveedor,count(*) as n,sum(valor_del_contrato) as v', where: wp, group: 'proveedor_adjudicado,documento_proveedor,tipodocproveedor', order: 'sum(valor_del_contrato) DESC', limit: 60 }, q).then((r) => ['prov', refine(r, 'proveedor_adjudicado', 12)]));
-      if (mode === 'auto' && wo) jobs.push(textPart('contratos', { select: 'id_contrato,nombre_entidad,proveedor_adjudicado,objeto_del_contrato,valor_del_contrato,fecha_de_firma,estado_contrato', where: `tipo_de_contrato='Obra' AND ${wo}`, order: 'valor_del_contrato DESC', limit: 40 }, q).then((r) => ['obra', refine(r, 'objeto_del_contrato', 8)]));
-      if (!jobs.length) { res.innerHTML = '<p class="muted">Escriba al menos una palabra con dos letras o más.</p>'; return; }
-      const out = Object.fromEntries(await Promise.all(jobs));
-      res.innerHTML = (out.ent ? entList(out.ent) : '') + (out.prov ? provList(out.prov) : '') + (out.obra ? obraList(out.obra) : '');
+      const jobs = {};
+      if (showEnt && we) jobs.ent = textPart('contratos', { select: 'nombre_entidad,nit_entidad,departamento,ciudad,count(*) as n,sum(valor_del_contrato) as v', where: we, group: 'nombre_entidad,nit_entidad,departamento,ciudad', order: 'count(*) DESC', limit: 60 }, q).then((r) => refine(r, 'nombre_entidad', 12));
+      if (showProv) {
+        jobs.prov = nameSearch('contratos', 'proveedor_adjudicado', { select: 'proveedor_adjudicado,documento_proveedor,tipodocproveedor,count(*) as n,sum(valor_del_contrato) as v', group: 'proveedor_adjudicado,documento_proveedor,tipodocproveedor', order: 'sum(valor_del_contrato) DESC', limit: 80 }, ws, 'proveedor_adjudicado').then((r) => { if (r.ok) r.rows = r.rows.slice(0, 15); return r; });
+        jobs.prov1 = nameSearch('integrado', 'nom_raz_social_contratista', { select: 'nom_raz_social_contratista as nom,documento_proveedor as doc,tipo_documento_proveedor as tipo,origen,count(*) as n,sum(valor_contrato) as v', group: 'nom_raz_social_contratista,documento_proveedor,tipo_documento_proveedor,origen', order: 'count(*) DESC', limit: 120 }, ws, 'nom');
+      }
+      if (person) {
+        jobs.pep = nameSearch('pep', 'nombre_pep', { select: PEP_FIELDS, limit: 300 }, ws, 'nombre_pep', false);
+        ROLES.forEach((R) => { jobs['r_' + R.k] = nameSearch('contratos', R.nom, roleSelect(R), ws, 'nom', true, R.k !== 'sup'); });
+      }
+      if (mode === 'auto' && !person && wo) jobs.obra = textPart('contratos', { select: 'id_contrato,nombre_entidad,proveedor_adjudicado,objeto_del_contrato,valor_del_contrato,fecha_de_firma,estado_contrato', where: `tipo_de_contrato='Obra' AND ${wo}`, order: 'valor_del_contrato DESC', limit: 40 }, q).then((r) => refine(r, 'objeto_del_contrato', 8));
+      const keys = Object.keys(jobs); const vals = await Promise.all(Object.values(jobs));
+      const out = Object.fromEntries(keys.map((k, i) => [k, vals[i]]));
+      let html = ''; const items = []; let total = 0;
+      if (person) {
+        const roleParts = ROLES.map((R) => [R, out['r_' + R.k]]);
+        const people = buildPeople(out.pep.rows, roleParts);
+        const provDocs = new Set([...(out.prov?.rows || []).map((r) => digits(r.documento_proveedor)), ...(out.prov1?.rows || []).map((r) => digits(r.doc))]);
+        html += personList(people, [out.pep, ...roleParts.map((x) => x[1])], provDocs);
+        items.push(['Personas Expuestas Políticamente (SIGEP)', out.pep, out.pep.rows.length]);
+        roleParts.forEach(([R, p]) => items.push([`${R.l} (SECOP II)`, p, p.rows.length]));
+        total += people.length;
+      }
+      if (out.ent) { html += entList(out.ent); items.unshift(['Entidades contratantes (SECOP II)', out.ent, out.ent.rows.length]); total += out.ent.rows.length; }
+      if (out.prov) { html += provList(out.prov); items.push(['Contratistas SECOP II', out.prov, out.prov.rows.length]); total += out.prov.rows.length; }
+      if (out.prov1) { html += provList1(out.prov1); items.push(['Contratistas SECOP I y II (Integrado)', out.prov1, out.prov1.rows.length]); total += out.prov1.rows.length; }
+      if (out.obra) { html += obraList(out.obra); items.push(['Obras (SECOP II)', out.obra, out.obra.rows.length]); total += out.obra.rows.length; }
+      res.innerHTML = html + searchedCard(items, total, false);
     }
     bindNav(res);
   }
@@ -674,7 +818,37 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
     const rows = p.rows;
     const body = !p.ok ? errBox(p) : !rows.length ? '<p class="muted">Ningún contratista coincide en SECOP II.</p>' :
       `<div class="tablewrap"><table><thead><tr><th>Contratista</th><th class="r">Contratos</th><th class="r">Valor</th></tr></thead><tbody>${rows.map((r) => `<tr><td><button class="linkbtn" data-prov="${esc(r.documento_proveedor)}" data-name="${esc(r.proveedor_adjudicado)}">${esc(r.proveedor_adjudicado)}</button><span class="sub">${esc(r.tipodocproveedor || 'Doc.')} ${esc(maskDoc(r.documento_proveedor, r.tipodocproveedor))}</span></td><td class="r">${fmtN(r.n)}</td><td class="r" title="${fullCOP(r.v)}">${fmtCOP(r.v)}</td></tr>`).join('')}</tbody></table></div>`;
-    return `<div class="card"><div class="row" style="justify-content:space-between"><h3>Contratistas</h3><span class="badge live">en vivo</span></div>${body}<p class="muted" style="font-size:.78rem">Un mismo nombre con documentos distintos son registros distintos: no se unen por coincidencia de nombre.</p>${qlink(p)}</div>`;
+    return `<div class="card"><div class="row" style="justify-content:space-between"><h3>Contratistas · SECOP II</h3><span class="badge live">en vivo</span></div>${body}${partialNote([p])}<p class="muted" style="font-size:.78rem">Un mismo nombre con documentos distintos son registros distintos: no se unen por coincidencia de nombre.</p>${qlink(p)}</div>`;
+  }
+  // Contratistas en SECOP Integrado: incluye el histórico de SECOP I, que no está en SECOP II
+  function provList1(p) {
+    const m = new Map();
+    for (const r of p.rows || []) {
+      const k = digits(r.doc) || 'N:' + LOOSE(r.nom);
+      const c = m.get(k) || { doc: r.doc, nom: r.nom, tipo: r.tipo, s1n: 0, s1v: 0, s2n: 0, s2v: 0 };
+      if (r.origen === 'SECOPI') { c.s1n += num(r.n); c.s1v += num(r.v); } else { c.s2n += num(r.n); c.s2v += num(r.v); }
+      m.set(k, c);
+    }
+    const rows = [...m.values()].sort((a, b) => (b.s1v + b.s2v) - (a.s1v + a.s2v)).slice(0, 15);
+    const body = !p.ok ? errBox(p) : !rows.length ? '<p class="muted">Ningún contratista coincide en SECOP Integrado.</p>' :
+      `<div class="tablewrap"><table><thead><tr><th>Contratista</th><th class="r">SECOP I</th><th class="r">SECOP II</th></tr></thead><tbody>${rows.map((r) => `<tr><td><button class="linkbtn" data-prov="${esc(r.doc)}" data-name="${esc(r.nom)}">${esc(r.nom)}</button><span class="sub">${esc(r.tipo || 'Doc.')} ${esc(maskDoc(r.doc, r.tipo))}</span></td><td class="r">${r.s1n ? `${fmtN(r.s1n)} · ${fmtCOP(r.s1v)}` : '—'}</td><td class="r">${r.s2n ? `${fmtN(r.s2n)} · ${fmtCOP(r.s2v)}` : '—'}</td></tr>`).join('')}</tbody></table></div>`;
+    return `<div class="card"><div class="row" style="justify-content:space-between"><h3>Contratistas · histórico SECOP I y II</h3><span class="badge live">en vivo</span></div>${body}${partialNote([p])}<p class="muted" style="font-size:.78rem">SECOP Integrado reúne SECOP I (contratación anterior y entidades que no migraron) y SECOP II. Número de contratos · valor.</p>${qlink(p)}</div>`;
+  }
+  // Personas en función pública: listado PEP del SIGEP y roles en SECOP II
+  function personList(people, prts, provDocs) {
+    const anyErr = prts.some((p) => p && !p.ok);
+    const rows = people.slice(0, 15);
+    const body = !rows.length ? `<p class="muted">Nadie con ese nombre figura como Persona Expuesta Políticamente en el SIGEP ni como supervisor, ordenador del gasto o representante legal en SECOP II.${anyErr ? ' Algunas fuentes no respondieron (vea abajo).' : ''}</p>` :
+      `<div class="tablewrap"><table><thead><tr><th>Persona</th><th>Cargos y funciones registrados</th></tr></thead><tbody>${rows.map((p) => {
+        const nm = [...p.names.values()][0] || '—';
+        const lines = p.pep.map((r) => `<div class="roleline"><span class="badge live">SIGEP · PEP</span>${esc(r.denominacion_cargo)} — ${esc(r.nombre_entidad)} <span class="muted">(desde ${esc(r.fecha_vinculacion || '¿?')}${r.fecha_desvinculacion ? ' hasta ' + esc(r.fecha_desvinculacion) : ''})</span>${hvLink(r)}</div>`);
+        const rl = p.roles.sort((a, b) => num(b.n) - num(a.n));
+        rl.slice(0, 5).forEach((r) => lines.push(`<div class="roleline"><span class="badge part">SECOP II</span>${esc(r.R.l)}${r.R.k === 'rl' ? ' de ' + esc(r.emp) : ' en ' + esc(r.ent)} · ${fmtN(r.n)} contrato(s) ${span(r.f1, r.f2) ? '(' + span(r.f1, r.f2) + ')' : ''}</div>`));
+        if (rl.length > 5) lines.push(`<div class="roleline muted">y ${rl.length - 5} registro(s) más en la ficha</div>`);
+        const alsoProv = p.doc && provDocs && provDocs.has(p.doc);
+        return `<tr><td><button class="linkbtn" data-person="${esc(p.doc)}" data-name="${esc(nm)}">${esc(nm)}</button><span class="sub">${p.doc ? 'Documento ' + esc(maskDoc(p.doc, 'CC')) : 'Sin documento en la fuente'}${p.names.size > 1 ? ` · ${p.names.size} variantes del nombre` : ''}</span>${alsoProv ? '<span class="sub"><span class="badge media">También contratista</span></span>' : ''}</td><td>${lines.join('')}</td></tr>`;
+      }).join('')}</tbody></table></div>`;
+    return `<div class="card" style="grid-column:1/-1"><div class="row" style="justify-content:space-between"><h3>Función pública</h3><span class="badge live">en vivo</span></div>${body}${partialNote(prts)}<p class="muted" style="font-size:.78rem">Fuentes: listado de Personas Expuestas Políticamente que las entidades registran en el SIGEP (Función Pública; cargos directivos, de manejo y de elección, hasta dos años después del retiro) y roles de supervisión, ordenación del gasto y representación legal en SECOP II. Servidores de planta que no son PEP: <a href="${SIGEP_URL}" target="_blank" rel="noopener">directorio SIGEP ↗</a>.</p>${prts.filter(Boolean).slice(0, 1).map(qlink).join('')}</div>`;
   }
   function obraList(p) {
     const rows = p.rows;
@@ -684,9 +858,10 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
   }
   function bindNav(root) {
     root.addEventListener('click', (e) => {
-      const b = e.target.closest('[data-ent],[data-prov],[data-contract]');
+      const b = e.target.closest('[data-ent],[data-prov],[data-contract],[data-person]');
       if (!b) return;
-      if (b.dataset.ent) openEntity(b.dataset.ent, b.dataset.name);
+      if (b.dataset.person !== undefined) openPerson(b.dataset.person, b.dataset.name);
+      else if (b.dataset.ent) openEntity(b.dataset.ent, b.dataset.name);
       else if (b.dataset.prov) openProvider(b.dataset.prov, b.dataset.name);
       else if (b.dataset.contract) openContract(b.dataset.contract);
     });
@@ -1319,6 +1494,8 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
       names: part('contratos', { select: 'proveedor_adjudicado as nom,tipodocproveedor as tipo,es_grupo,es_pyme,nombre_representante_legal as rep,count(*) as n', where: W, group: 'proveedor_adjudicado,tipodocproveedor,es_grupo,es_pyme,nombre_representante_legal', order: 'count(*) DESC', limit: 20 }),
       list: part('contratos', { select: CONTRACT_FIELDS, where: WP, order: 'fecha_de_firma DESC', limit: 1000 }),
       secop1: part('integrado', { select: 'origen,count(*) as n,sum(valor_contrato) as v', where: W, group: 'origen', limit: 5 }),
+      s1list: part('integrado', { select: 'nombre_de_la_entidad,numero_del_contrato,objeto_a_contratar,tipo_de_contrato,valor_contrato,fecha_de_firma_del_contrato,url_contrato', where: `${W} AND origen='SECOPI'`, order: 'fecha_de_firma_del_contrato DESC', limit: 500 }),
+      pep: digits(doc) ? part('pep', { select: PEP_FIELDS, where: `numero_documento=${digits(doc)}`, limit: 20 }) : Promise.resolve({ ok: true, rows: [], ds: 'pep' }),
       multas1: part('multas1', { select: 'nombre_entidad,numero_de_resolucion,nombre_contratista,documento_contratista,numero_de_contrato,valor_sancion,fecha_de_firmeza,ruta_de_proceso', where: `documento_contratista=${sqlStr(doc)}`, order: 'fecha_de_firmeza DESC', limit: 100 }),
     };
     const keys = Object.keys(jobs); const vals = await Promise.all(Object.values(jobs));
@@ -1331,7 +1508,7 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
     setView(`<div class="stack"><div class="profile-head"><span class="eyebrow">Contratista · documento ${esc(ctx.doc)}</span><h2>${esc(ctx.name || ctx.doc)}</h2><div class="idline" id="idline"></div></div>
       <div class="row" style="justify-content:space-between;align-items:flex-end">${periodSelect(ctx.pk)}<div class="row" id="exportbar"></div></div>
       <div class="tabs" role="tablist" id="tabs"></div><div id="tabbody" class="stack"><p class="loading">Consultando SECOP…</p></div></div>`);
-    bindPeriod((v) => { ctx.pk = v; ctx.D = null; renderProvider(ctx); });
+    bindPeriod((v) => { ctx.pk = v; ctx.D = null; ctx.docs = null; renderProvider(ctx); });
     if (!ctx.D) ctx.D = await loadProvider(ctx.doc, ctx.pk);
     if (state.current !== ctx) return;
     const D = ctx.D; const nm = D.names.rows;
@@ -1339,7 +1516,7 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
     if (!isCompanyDoc(tipo)) $('.profile-head .eyebrow').textContent = `Contratista · ${tipo || 'documento'} ${maskDoc(ctx.doc, tipo)}`;
     const reps = [...new Set(nm.map((r) => r.rep).filter((r) => r && !/no definido|sin descrip/i.test(r)))];
     $('#idline').innerHTML = `<span>${esc(tipo)}</span>${nm.some((r) => r.es_grupo === 'Si') ? '<span>Ha contratado como consorcio o unión temporal</span>' : ''}${nm.some((r) => r.es_pyme === 'Si') ? '<span>Registrado como pyme</span>' : ''}${nm.length > 1 ? `<span>${nm.length} variantes de nombre con el mismo documento</span>` : ''}`;
-    const tabs = [['resumen', 'Resumen'], ['entidades', 'Entidades'], ['mapa', 'Mapa'], ['red', 'Red'], ['contratos', 'Contratos'], ['sanciones', 'Sanciones']];
+    const tabs = [['resumen', 'Resumen'], ['entidades', 'Entidades'], ['mapa', 'Mapa'], ['red', 'Red'], ['contratos', 'Contratos'], ['documentos', 'Informes y documentos'], ['politica', 'Vínculos políticos'], ['sanciones', 'Sanciones']];
     $('#tabs').innerHTML = tabs.map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${ctx.tab === k}">${l}</button>`).join('');
     $('#tabs').onclick = (e) => { const b = e.target.closest('[data-tab]'); if (!b) return; ctx.tab = b.dataset.tab; $$('#tabs button').forEach((x) => x.setAttribute('aria-selected', x === b)); draw(); };
     $('#exportbar').innerHTML = `<button class="btn" id="xcsv">CSV</button><button class="btn" id="xxlsx">Excel</button>`;
@@ -1354,7 +1531,7 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
           <div class="grid2"><div class="card"><h3>Evolución anual</h3>${D.years.ok ? yearChart(D.years.rows.filter((r) => r.anio)) : errBox(D.years)}${qlink(D.years)}</div>
           <div class="card"><h3>Modalidades</h3>${D.mods.ok ? modBars(D.mods.rows) : errBox(D.mods)}${qlink(D.mods)}</div></div>
           <div class="grid2"><div class="card"><h3>Departamentos</h3>${D.deps.ok ? `<div class="bars">${dep.slice(0, 12).map((d) => bar(d.dep || 'Sin dato', num(d.v), num(dep[0].v) || 1, fmtCOP(d.v), 'blue')).join('')}</div>` : errBox(D.deps)}${qlink(D.deps)}</div>
-          <div class="card"><h3>Datos de registro</h3><div class="facts"><div><span>Representante(s) legal(es) en SECOP II</span><span>${reps.length ? reps.map(esc).join('<br>') : 'No diligenciado'}</span></div><div><span>Contratos en SECOP I</span><span>${D.secop1.ok ? (s1 ? `${fmtN(s1.n)} · ${fmtCOP(s1.v)}` : 'Sin registros') : 'Fuente no disponible'}</span></div></div>
+          <div class="card"><h3>Datos de registro</h3><div class="facts"><div><span>Representante(s) legal(es) en SECOP II</span><span>${reps.length ? reps.map(esc).join('<br>') : 'No diligenciado'}</span></div><div><span>Contratos en SECOP I</span><span>${D.secop1.ok ? (s1 ? `${fmtN(s1.n)} · ${fmtCOP(s1.v)} (ver pestaña Contratos)` : 'Sin registros') : 'Fuente no disponible'}</span></div><div><span>Función pública (SIGEP · PEP)</span><span>${!D.pep.ok ? 'Fuente no disponible' : D.pep.rows.length ? D.pep.rows.map((r) => `${esc(r.denominacion_cargo)} — ${esc(r.nombre_entidad)} (desde ${esc(r.fecha_vinculacion || '¿?')})`).join('<br>') + `<br><button class="linkbtn" data-person="${esc(digits(ctx.doc))}" data-name="${esc(ctx.name || '')}">Ver ficha de persona →</button>` : 'No figura en el listado PEP'}</span></div></div>
           <p class="muted" style="font-size:.78rem">Socios, accionistas y beneficiarios finales no están en SECOP.</p><div class="row"><button class="btn" data-go-jus="${esc(ctx.name || ctx.doc)}">Procesos judiciales ↗</button><button class="btn" data-go-ext="${esc(ctx.name || ctx.doc)}">Conexiones en el exterior ↗</button></div>${qlink(D.names)}</div></div>`;
       } else if (ctx.tab === 'entidades') {
         const ents = D.ents.rows; const tot = sum(ents, 'v');
@@ -1373,14 +1550,208 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
         reps.slice(0, 4).forEach((r) => nodes.push({ kind: 'person', label: r, v: 0, valTxt: 'representante legal', title: `${r}: representante legal declarado en SECOP II` }));
         radialGraph($('#cy'), ctx.name || ctx.doc, nodes, (d) => openEntity(d.key, d.label));
       } else if (ctx.tab === 'contratos') {
-        body.innerHTML = `<div class="card"><h3>Contratos</h3>${D.list.ok ? '' : errBox(D.list)}<div id="ctable"></div>${qlink(D.list)}</div>`;
+        body.innerHTML = `<div class="card"><h3>Contratos · SECOP II</h3>${D.list.ok ? '' : errBox(D.list)}<div id="ctable"></div>${qlink(D.list)}</div>${secop1Table(D.s1list)}`;
         if (D.list.ok) contractTable($('#ctable'), D.list.rows);
+        bindNav(body);
       } else if (ctx.tab === 'sanciones') {
         body.innerHTML = `<div class="notice info"><b>Distinga estados</b><span>Sanciones contractuales publicadas en SECOP. En SECOP II se buscan por los contratos del periodo elegido (hasta 120). "A la espera de aprobación" no es una decisión en firme.</span></div><div class="card"><h3>SECOP II</h3>${sancionesTable2(D.multas2)}${qlink(D.multas2)}</div><div class="card"><h3>SECOP I</h3>${sancionesTable1(D.multas1)}${qlink(D.multas1)}</div>`;
         bindNav(body);
       }
+      if (ctx.tab === 'resumen') bindNav(body);
+      if (ctx.tab === 'documentos') { provDocsTab(ctx, body); return; }
+      if (ctx.tab === 'politica') { politicsTab(ctx, body, ctx.doc, D.ents.rows); return; }
       const gj = body.querySelector('[data-go-jus]'); if (gj) gj.onclick = () => { state.jus = { q: gj.dataset.goJus, tipo: isCompanyDoc(tipo) ? 'jur' : 'nat' }; navTo('justicia'); };
       const ge = body.querySelector('[data-go-ext]'); if (ge) ge.onclick = () => { state.ext = { q: ge.dataset.goExt }; navTo('exterior'); };
+    };
+    draw();
+  }
+
+  // ---------------------------------------------------------------- Documentos publicados en SECOP II
+  const ARCH = ['arch21', 'arch22', 'arch23', 'arch24', 'arch25', 'arch26'];
+  // Documentos personales del contratista: no se listan (siguen publicados en SECOP)
+  const DOC_SENSITIVE = /cuenta bancaria|certificaci[oó]n bancaria|certificado bancario|bancari[ao]|c[eé]dula|\bcc\b|\brut\b|\barl\b|\beps\b|afiliaci[oó]n|pensi[oó]n|libreta militar|examen m[eé]dico|ex[aá]menes|historia cl[ií]nica|seguridad social|planilla|\bpila\b|hoja de vida|\bhv\b|antecedentes|declaraci[oó]n de bienes/i;
+  function docKind(name) {
+    const n = normTxt(name);
+    if (/PCCNTR/.test(n)) return 'con';
+    if (/DESIGNACION|CAMBIO DE SUP|PRORROGA|ADICION|OTROSI|MODIFICA|CESION|SUSPENSION|REINICIO|LIQUIDACION|TERMINACION/.test(n)) return 'mod';
+    if (/INFORME|ACTIVIDADES|EJECUCION|SUPERVISION|CUMPLIMIENTO|ENTREGABLE|PRODUCTO|EVIDENCIA|SOPORTE|CUENTA DE COBRO|FACTURA|MES|ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|SEPTIEMBRE|SETIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE/.test(n)) return 'inf';
+    if (/MINUTA|CONTRATO|FIRMADO|ACTA DE INICIO|POLIZA|GARANTIA|CDP|\bRP\b|REGISTRO PRESUP|ACUERDO DE CONF/.test(n)) return 'con';
+    if (/ESTUDIO|PREVIO|PLIEGO|EVALUACION|ADJUDICA|OFERTA|PROPUESTA|INVITACION|RESOLUCION|COTIZACION|ANALISIS DEL SECTOR/.test(n)) return 'pre';
+    return 'otr';
+  }
+  const fmtSize = (b) => { const n = num(b); return n >= 1048576 ? nf1.format(n / 1048576) + ' MB' : n >= 1024 ? nf0.format(n / 1024) + ' KB' : n ? nf0.format(n) + ' B' : '—'; };
+  async function loadDocs(ids) {
+    const list = [...new Set(ids.filter(Boolean))];
+    if (!list.length) return { ok: true, rows: [], hidden: 0, failed: 0, parts: [] };
+    const chunks = []; for (let i = 0; i < list.length; i += 40) chunks.push(list.slice(i, i + 40));
+    const parts = await Promise.all(ARCH.flatMap((k) => chunks.map((c) => part(k, { select: 'id_documento,n_mero_de_contrato,nombre_archivo,extensi_n,tamanno_archivo,fecha_carga,url_descarga_documento', where: `n_mero_de_contrato in (${c.map(sqlStr).join(',')})`, limit: 5000 }))));
+    const seen = new Set(); const rows = []; let hidden = 0;
+    for (const p of parts) for (const r of p.rows) {
+      const k1 = r.id_documento || ''; const k2 = `${r.n_mero_de_contrato}|${normTxt(r.nombre_archivo)}|${fmtDate(r.fecha_carga)}`;
+      if ((k1 && seen.has(k1)) || seen.has(k2)) continue;
+      seen.add(k1); seen.add(k2);
+      if (DOC_SENSITIVE.test(r.nombre_archivo || '')) { hidden++; continue; }
+      rows.push(r);
+    }
+    rows.sort((a, b) => String(b.fecha_carga || '').localeCompare(String(a.fecha_carga || '')));
+    return { ok: parts.some((p) => p.ok), rows, hidden, failed: parts.filter((p) => !p.ok).length, parts };
+  }
+  function docsPanel(root, docs, opts = {}) {
+    const KINDS = [['all', 'Todos'], ['inf', 'Informes y cuentas de cobro'], ['mod', 'Modificaciones y supervisión'], ['con', 'Contrato, garantías y presupuesto'], ['pre', 'Precontractual'], ['otr', 'Otros']];
+    const rows = docs.rows.map((r) => ({ ...r, _k: docKind(r.nombre_archivo) }));
+    const counts = {}; rows.forEach((r) => { counts[r._k] = (counts[r._k] || 0) + 1; });
+    const st = { kind: opts.defKind && counts[opts.defKind] ? opts.defKind : 'all', q: '', focus: false };
+    const draw = () => {
+      let v = rows.filter((r) => st.kind === 'all' || r._k === st.kind);
+      if (st.q) { const qn = normTxt(st.q); v = v.filter((r) => normTxt(r.nombre_archivo).includes(qn)); }
+      const failNote = docs.failed ? `<div class="notice"><b>Búsqueda incompleta</b><span>${fmtN(docs.failed)} consulta(s) a los archivos de SECOP II no respondieron. Puede haber más documentos; vuelva a abrir la pestaña en un momento.</span></div>` : '';
+      root.innerHTML = `${failNote}${!rows.length ? `<p class="muted">${docs.ok ? 'No hay documentos de estos contratos en los conjuntos de archivos de SECOP II publicados en datos abiertos.' : 'Los archivos de SECOP II no respondieron.'}</p>` : `<div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px">${KINDS.filter(([k]) => k === 'all' || counts[k]).map(([k, l]) => `<button class="btn ${st.kind === k ? 'primary' : ''}" data-dk="${k}">${l} · ${fmtN(k === 'all' ? rows.length : counts[k])}</button>`).join('')}</div>
+        <label class="field" style="max-width:420px;margin-bottom:8px"><span class="eyebrow">Filtrar por nombre de archivo</span><input class="dq" value="${esc(st.q)}" placeholder="enero, informe, acta, prórroga…"></label>
+        ${!v.length ? '<p class="muted">Ningún documento coincide.</p>' : `<div class="tablewrap"><table><thead><tr><th>Cargado</th><th>Archivo</th>${opts.byId ? '<th>Contrato</th>' : ''}<th class="r">Tamaño</th></tr></thead><tbody>${v.slice(0, 400).map((r) => `<tr><td class="num">${fmtDate(r.fecha_carga)}</td><td>${urlOf(r.url_descarga_documento) ? `<a href="${esc(urlOf(r.url_descarga_documento))}" target="_blank" rel="noopener">${esc(r.nombre_archivo)} ↗</a>` : esc(r.nombre_archivo)}<span class="sub">${esc(String(r.extensi_n || '').toUpperCase())}</span></td>${opts.byId ? `<td><button class="linkbtn mono" data-contract="${esc(r.n_mero_de_contrato)}">${esc(r.n_mero_de_contrato)}</button><span class="sub">${esc(String((opts.byId[r.n_mero_de_contrato] || {}).objeto_del_contrato || '').slice(0, 90))}</span></td>` : ''}<td class="r">${fmtSize(r.tamanno_archivo)}</td></tr>`).join('')}</tbody></table></div>${v.length > 400 ? '<p class="muted">Se muestran 400; use el filtro.</p>' : ''}`}`}
+        <p class="muted" style="font-size:.78rem">${esc(opts.note || '')} Cada enlace descarga el archivo directamente de SECOP II (Colombia Compra Eficiente). La categoría se asigna por el nombre del archivo y puede fallar. ${docs.hidden ? `No se listan ${fmtN(docs.hidden)} documento(s) personales (cédula, RUT, certificación bancaria, seguridad social, hoja de vida); siguen publicados en SECOP.` : ''}</p>`;
+      root.querySelectorAll('[data-dk]').forEach((b) => { b.onclick = () => { st.kind = b.dataset.dk; draw(); }; });
+      const inp = root.querySelector('.dq');
+      if (inp) { inp.oninput = () => { st.q = inp.value; st.focus = true; draw(); }; if (st.focus) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }
+    };
+    draw();
+  }
+  async function provDocsTab(ctx, body) {
+    const rowsII = (ctx.D.list.rows || []).filter((r) => r.id_contrato);
+    if (!rowsII.length) { body.innerHTML = '<div class="card"><h3>Informes y documentos</h3><p class="muted">No hay contratos de SECOP II en el periodo elegido. Los documentos de SECOP I se abren desde el enlace de cada contrato en la pestaña Contratos.</p></div>'; return; }
+    const take = rowsII.slice(0, 80).map((r) => r.id_contrato);
+    if (!ctx.docs || ctx.docsKey !== take.join()) {
+      body.innerHTML = '<p class="loading">Buscando informes y documentos publicados en SECOP II…</p>';
+      const docs = await loadDocs(take);
+      if (state.current !== ctx) return;
+      ctx.docs = docs; ctx.docsKey = take.join();
+      if (ctx.tab !== 'documentos') return;
+    }
+    body.innerHTML = '<div class="card"><h3>Informes y documentos de sus contratos</h3><div id="docpanel"></div></div>';
+    docsPanel($('#docpanel'), ctx.docs, { byId: Object.fromEntries(rowsII.map((r) => [r.id_contrato, r])), defKind: 'inf', note: rowsII.length > 80 ? 'Se revisaron los 80 contratos más recientes del periodo.' : '' });
+    bindNav(body);
+  }
+
+  // ---------------------------------------------------------------- Vínculos políticos documentados (CNE · Cuentas Claras)
+  const CC_URL = 'https://www.cnecuentasclaras.gov.co/';
+  async function loadPolitics(d) {
+    const [ap, ca] = await Promise.all([
+      part('cne19', { select: 'nombre_candidato,org_nombre,cnd_nombre,mun_nombre,dep_nombre,ing_valor,ing_fecha_comprobante,tdo_nombre,ing_identificacion,can_identificacion', where: `starts_with(ing_identificacion, ${sqlStr(d)})`, order: 'ing_valor DESC', limit: 300 }),
+      part('cne19', { select: 'nombre_candidato,org_nombre,cnd_nombre,mun_nombre,dep_nombre,count(*) as n,sum(ing_valor) as v', where: `can_identificacion=${d}`, group: 'nombre_candidato,org_nombre,cnd_nombre,mun_nombre,dep_nombre', limit: 20 }),
+    ]);
+    ap.rows = ap.rows.filter((r) => { const x = digits(r.ing_identificacion); return (x === d || (x.length === d.length + 1 && x.startsWith(d))) && digits(r.can_identificacion) !== d; });
+    return { ap, ca };
+  }
+  const placeOf = (s) => normTxt(s).replace(/[^A-Z ]/g, ' ').replace(/\bD C\b/g, ' ').replace(/\s+/g, ' ').trim();
+  function entMatches(a, ents) {
+    const c = normTxt(a.cnd_nombre); const isAlc = /ALCALD/.test(c); const isGob = /GOBERN/.test(c);
+    if (!isAlc && !isGob) return [];
+    const place = placeOf(isAlc ? a.mun_nombre : a.dep_nombre);
+    if (!place || place === 'NO APLICA') return [];
+    return ents.filter((e) => { const n = placeOf(e.nom); return n.includes(place) && (isAlc ? /ALCALD|MUNICIPIO|DISTRITO/.test(n) : /GOBERNACION|DEPARTAMENTO/.test(n)); });
+  }
+  async function politicsTab(ctx, body, doc, ents) {
+    const d = digits(doc);
+    if (!d) { body.innerHTML = '<div class="card"><h3>Vínculos políticos</h3><p class="muted">Sin número de documento no es posible cruzar con certeza las fuentes electorales.</p></div>'; return; }
+    if (!ctx.pol) {
+      body.innerHTML = '<p class="loading">Consultando Cuentas Claras (CNE)…</p>';
+      const pol = await loadPolitics(d);
+      if (state.current !== ctx) return;
+      ctx.pol = pol;
+      if (ctx.tab !== 'politica') return;
+    }
+    const { ap, ca } = ctx.pol;
+    const flags = [];
+    for (const a of ap.rows) { const m = entMatches(a, ents || []); if (m.length) flags.push({ a, m }); }
+    const lugar = (r) => [r.mun_nombre, r.dep_nombre].filter((x) => x && !/NO APLICA/i.test(x)).map(esc).join(', ');
+    body.innerHTML = `${flags.length ? `<div class="notice"><b>Aportó a una campaña y contrató con esa administración territorial</b><span>${flags.slice(0, 6).map(({ a, m }) => `Aporte de ${fmtCOP(a.ing_valor)} (${fmtDate(a.ing_fecha_comprobante)}) a ${esc(a.nombre_candidato)}, candidatura a ${esc(a.cnd_nombre)} de ${lugar(a)}; contratos con ${m.slice(0, 2).map((e) => esc(e.nom)).join(' y ')}.`).join('<br>')}<br><br>Señal para verificar, no prueba de irregularidad. El artículo 2 de la Ley 1474 de 2011 inhabilita para contratar con la respectiva entidad territorial a quien aportó a la campaña del alcalde o gobernador elegido más del 2,5 % del tope de gastos. Confirme si el candidato fue elegido, el tope de esa campaña y las fechas de los contratos.</span></div>` : ''}
+      <div class="grid2">
+      <div class="card"><h3>Aportes a campañas</h3>${!ap.ok ? errBox(ap) : !ap.rows.length ? '<p class="muted">No aparece como aportante en los ingresos de campañas de 2019 reportados a Cuentas Claras.</p>' : `<div class="tablewrap"><table><thead><tr><th>Candidato · cargo</th><th class="r">Aporte</th></tr></thead><tbody>${ap.rows.map((r) => `<tr><td>${esc(r.nombre_candidato)}<span class="sub">${esc(r.cnd_nombre)} · ${lugar(r)} · ${esc(r.org_nombre)}</span></td><td class="r">${fmtCOP(r.ing_valor)}<span class="sub">${fmtDate(r.ing_fecha_comprobante)} · ${esc(r.tdo_nombre)}</span></td></tr>`).join('')}</tbody></table></div>`}${qlink(ap)}</div>
+      <div class="card"><h3>Candidaturas</h3>${!ca.ok ? errBox(ca) : !ca.rows.length ? '<p class="muted">No aparece como candidato en las elecciones territoriales de 2019.</p>' : `<div class="tablewrap"><table><thead><tr><th>Cargo · partido</th><th class="r">Ingresos reportados</th></tr></thead><tbody>${ca.rows.map((r) => `<tr><td>${esc(r.cnd_nombre)} · ${lugar(r)}<span class="sub">${esc(r.org_nombre)}</span></td><td class="r">${fmtCOP(r.v)}<span class="sub">${fmtN(r.n)} registros</span></td></tr>`).join('')}</tbody></table></div>`}${qlink(ca)}</div>
+      </div>
+      <div class="notice info"><b>Qué cubre</b><span>Solo hay datos abiertos de los ingresos de campañas de las elecciones territoriales de 2019 (CNE, Cuentas Claras). Para Congreso y Presidencia 2022 y territoriales 2023, consulte directamente <a href="${CC_URL}" target="_blank" rel="noopener">Cuentas Claras ↗</a>. Aquí solo se muestran vínculos registrados en fuentes oficiales; RADAR no infiere militancia ni afinidad política.</span></div>`;
+    bindNav(body);
+  }
+
+  function secop1Table(p) {
+    if (!p) return '';
+    if (!p.ok) return `<div class="card"><h3>Contratos · SECOP I</h3>${errBox(p)}</div>`;
+    if (!p.rows.length) return '';
+    return `<div class="card"><h3>Contratos · SECOP I</h3><div class="tablewrap"><table><thead><tr><th>Firma</th><th>Objeto · entidad</th><th class="r">Valor</th></tr></thead><tbody>${p.rows.map((r) => `<tr><td class="num">${fmtDate(r.fecha_de_firma_del_contrato)}</td><td class="objeto">${esc(String(r.objeto_a_contratar || '').slice(0, 180))}<span class="sub">${esc(r.nombre_de_la_entidad)} · ${esc(r.tipo_de_contrato || '')} · ${esc(r.numero_del_contrato || '')}${urlOf(r.url_contrato) ? ` · <a href="${esc(urlOf(r.url_contrato))}" target="_blank" rel="noopener">SECOP I ↗</a>` : ''}</span></td><td class="r">${fmtCOP(r.valor_contrato)}</td></tr>`).join('')}</tbody></table></div>${p.rows.length >= 500 ? '<p class="muted">Se muestran los 500 más recientes.</p>' : ''}${qlink(p)}</div>`;
+  }
+
+  // ---------------------------------------------------------------- Ficha de persona (función pública y contratación)
+  function openPerson(doc, name) {
+    const ctx = { kind: 'persona', doc: digits(doc), name: name || '', tab: 'resumen', D: null };
+    ctx.render = () => renderPerson(ctx);
+    state.current = ctx; navTo('ficha');
+  }
+  async function loadPerson(ctx) {
+    const hasDoc = ctx.doc.length >= 5;
+    const U = sqlStr(String(ctx.name || '').trim().toUpperCase());
+    const byRole = (R) => (hasDoc ? `${R.doc}=${sqlStr(ctx.doc)}` : `upper(${R.nom})=${U}`);
+    const none = (ds) => Promise.resolve({ ok: true, rows: [], ds });
+    const fun = ROLES.filter((R) => R.k !== 'rl');
+    const jobs = {
+      pep: part('pep', { select: PEP_FIELDS, where: hasDoc ? `numero_documento=${ctx.doc}` : `upper(nombre_pep)=${U}`, limit: 100 }),
+      list: part('contratos', { select: CONTRACT_FIELDS + ',nombre_supervisor,n_mero_de_documento_supervisor,nombre_ordenador_del_gasto,n_mero_de_documento_ordenador_del_gasto,nombre_ordenador_de_pago,n_mero_de_documento_ordenador_de_pago', where: fun.map((R) => `(${byRole(R)})`).join(' OR '), order: 'fecha_de_firma DESC', limit: 1000 }),
+      rl: part('contratos', { select: 'proveedor_adjudicado as nom,documento_proveedor as doc,tipodocproveedor as tipo,count(*) as n,sum(valor_del_contrato) as v,min(fecha_de_firma) as f1,max(fecha_de_firma) as f2', where: byRole(ROLES[3]), group: 'proveedor_adjudicado,documento_proveedor,tipodocproveedor', order: 'count(*) DESC', limit: 50 }),
+      prov2: hasDoc ? part('contratos', { select: 'nombre_entidad as ent,nit_entidad as nit,count(*) as n,sum(valor_del_contrato) as v,min(fecha_de_firma) as f1,max(fecha_de_firma) as f2', where: `documento_proveedor=${sqlStr(ctx.doc)}`, group: 'nombre_entidad,nit_entidad', order: 'count(*) DESC', limit: 100 }) : none('contratos'),
+      prov1: hasDoc ? part('integrado', { select: 'origen,count(*) as n,sum(valor_contrato) as v', where: `documento_proveedor=${sqlStr(ctx.doc)}`, group: 'origen', limit: 5 }) : none('integrado'),
+    };
+    const keys = Object.keys(jobs); const vals = await Promise.all(Object.values(jobs));
+    const D = Object.fromEntries(keys.map((k, i) => [k, vals[i]]));
+    // Funciones por rol y entidad, calculadas sobre los contratos en que aparece (hasta 1.000 más recientes)
+    D.byRole = fun.map((R) => {
+      const m = new Map();
+      for (const r of D.list.rows) {
+        const mine = hasDoc ? digits(r[R.doc]) === ctx.doc : String(r[R.nom] || '').toUpperCase() === String(ctx.name).toUpperCase();
+        if (!mine) continue;
+        const c = m.get(r.nit_entidad) || { ent: r.nombre_entidad, nit: r.nit_entidad, n: 0, v: 0, f1: r.fecha_de_firma, f2: r.fecha_de_firma };
+        c.n++; c.v += num(r.valor_del_contrato);
+        if (r.fecha_de_firma && (!c.f1 || r.fecha_de_firma < c.f1)) c.f1 = r.fecha_de_firma;
+        if (r.fecha_de_firma && (!c.f2 || r.fecha_de_firma > c.f2)) c.f2 = r.fecha_de_firma;
+        m.set(r.nit_entidad, c);
+      }
+      return [R, [...m.values()].sort((a, b) => b.n - a.n)];
+    });
+    return D;
+  }
+  async function renderPerson(ctx) {
+    setView(`<div class="stack"><div class="profile-head"><span class="eyebrow">Persona · ${ctx.doc ? 'documento ' + esc(maskDoc(ctx.doc, 'CC')) : 'sin documento en la fuente'}</span><h2>${esc(ctx.name || ctx.doc)}</h2><div class="idline" id="idline"></div></div>
+      <div class="tabs" role="tablist" id="tabs"></div><div id="tabbody" class="stack"><p class="loading">Consultando SIGEP y SECOP…</p></div></div>`);
+    if (!ctx.D) ctx.D = await loadPerson(ctx);
+    if (state.current !== ctx) return;
+    const D = ctx.D;
+    const asProv2 = sum(D.prov2.rows, 'n'); const s1 = D.prov1.rows.find((r) => r.origen === 'SECOPI');
+    const funcs = D.byRole.filter(([, rows]) => rows.length);
+    const chips = [];
+    if (D.pep.rows.length) chips.push('<span>Registrada como Persona Expuesta Políticamente (SIGEP)</span>');
+    funcs.forEach(([R]) => chips.push(`<span>${esc(R.l)} en SECOP II</span>`));
+    if (D.rl.rows.length) chips.push('<span>Representante legal de contratistas</span>');
+    if (asProv2 || s1) chips.push('<span>Ha sido contratista del Estado</span>');
+    $('#idline').innerHTML = chips.join('');
+    const tabs = [['resumen', 'Resumen'], ['contratos', `Contratos que supervisó u ordenó (${fmtN(D.list.rows.length)})`], ['politica', 'Vínculos políticos']];
+    $('#tabs').innerHTML = tabs.map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${ctx.tab === k}">${l}</button>`).join('');
+    $('#tabs').onclick = (e) => { const b = e.target.closest('[data-tab]'); if (!b) return; ctx.tab = b.dataset.tab; $$('#tabs button').forEach((x) => x.setAttribute('aria-selected', x === b)); draw(); };
+    const draw = () => {
+      const body = $('#tabbody');
+      if (ctx.tab === 'resumen') {
+        const dual = (asProv2 || s1) && (D.pep.rows.length || funcs.length);
+        const pepCard = `<div class="card"><h3>Cargos registrados en el SIGEP</h3>${!D.pep.ok ? errBox(D.pep) : D.pep.rows.length ? `<div class="tablewrap"><table><thead><tr><th>Cargo · entidad</th><th>Vinculación</th><th>Retiro</th></tr></thead><tbody>${D.pep.rows.map((r) => `<tr><td>${esc(r.denominacion_cargo)}<span class="sub">${esc(r.nombre_entidad)}${hvLink(r)}</span></td><td class="num">${esc(r.fecha_vinculacion || '—')}</td><td class="num">${esc(r.fecha_desvinculacion || 'No reportado')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">No figura en el listado de Personas Expuestas Políticamente. Ese listado cubre cargos directivos, de manejo y de elección que las entidades reportan al SIGEP; no incluye a todos los servidores públicos.</p>'}<p class="muted" style="font-size:.78rem">Para la hoja de vida completa y otros vínculos: <a href="${SIGEP_URL}" target="_blank" rel="noopener">directorio SIGEP ↗</a>.</p>${qlink(D.pep)}</div>`;
+        const funCard = `<div class="card"><h3>Funciones en contratos (SECOP II)</h3>${!D.list.ok ? errBox(D.list) : funcs.length ? funcs.map(([R, rows]) => `<h4 style="margin:10px 0 4px">${esc(R.l)}</h4><div class="tablewrap"><table><thead><tr><th>Entidad</th><th class="r">Contratos</th><th class="r">Valor</th><th>Periodo</th></tr></thead><tbody>${rows.map((x) => `<tr><td><button class="linkbtn" data-ent="${esc(x.nit)}" data-name="${esc(x.ent)}">${esc(x.ent)}</button></td><td class="r">${fmtN(x.n)}</td><td class="r">${fmtCOP(x.v)}</td><td class="num">${span(x.f1, x.f2)}</td></tr>`).join('')}</tbody></table></div>`).join('') + (D.list.rows.length >= 1000 ? '<p class="muted">Calculado sobre los 1.000 contratos más recientes.</p>' : '') : '<p class="muted">No figura como supervisor, ordenador del gasto ni ordenador de pago en SECOP II. Muchas entidades no diligencian estos campos ("No definido").</p>'}${qlink(D.list)}</div>`;
+        const provCard = `<div class="card"><h3>Como contratista</h3>${!D.prov2.ok ? errBox(D.prov2) : ''}<div class="facts"><div><span>SECOP II</span><span>${asProv2 ? `${fmtN(asProv2)} contratos · ${fmtCOP(sum(D.prov2.rows, 'v'))} · ${esc(D.prov2.rows.slice(0, 3).map((r) => r.ent).join('; '))}` : 'Sin contratos con este documento'}</span></div><div><span>SECOP I</span><span>${!D.prov1.ok ? 'Fuente no disponible' : s1 ? `${fmtN(s1.n)} contratos · ${fmtCOP(s1.v)}` : 'Sin contratos con este documento'}</span></div></div>${asProv2 || s1 ? `<button class="btn" data-prov="${esc(ctx.doc)}" data-name="${esc(ctx.name)}">Abrir ficha de contratista →</button>` : ''}${ctx.doc ? '' : '<p class="muted">Sin documento no es posible cruzar con certeza la contratación.</p>'}</div>`;
+        const rlCard = D.rl.ok && D.rl.rows.filter((r) => digits(r.doc) !== ctx.doc).length ? `<div class="card"><h3>Representante legal de</h3><div class="tablewrap"><table><thead><tr><th>Contratista</th><th class="r">Contratos</th><th class="r">Valor</th></tr></thead><tbody>${D.rl.rows.filter((r) => digits(r.doc) !== ctx.doc).map((r) => `<tr><td><button class="linkbtn" data-prov="${esc(r.doc)}" data-name="${esc(r.nom)}">${esc(r.nom)}</button><span class="sub">${esc(r.tipo || '')} ${esc(maskDoc(r.doc, r.tipo))} · ${span(r.f1, r.f2)}</span></td><td class="r">${fmtN(r.n)}</td><td class="r">${fmtCOP(r.v)}</td></tr>`).join('')}</tbody></table></div>${qlink(D.rl)}</div>` : '';
+        const pepName = ctx.name || (D.pep.rows[0] || {}).nombre_pep || '';
+        const nq = encodeURIComponent(`"${pepName}"`);
+        const webCard = D.pep.rows.length && pepName ? `<div class="card"><h3>Presencia pública en línea</h3><p class="muted" style="font-size:.85rem">Por tener un cargo registrado en el SIGEP se ofrecen búsquedas abiertas por su nombre. RADAR no rastrea, no guarda ni atribuye cuentas: confirme usted que cada perfil corresponde a esta persona, porque los homónimos son frecuentes.</p><div class="row"><a class="btn" href="https://x.com/search?q=${nq}&f=user" target="_blank" rel="noopener">Cuentas en X ↗</a><a class="btn" href="https://news.google.com/search?q=${nq}&hl=es-419&gl=CO&ceid=CO:es-419" target="_blank" rel="noopener">Noticias ↗</a><a class="btn" href="https://www.google.com/search?q=${nq}+${encodeURIComponent('"' + (D.pep.rows[0].nombre_entidad || '') + '"')}" target="_blank" rel="noopener">Web ↗</a></div></div>` : '';
+        body.innerHTML = `${dual ? '<div class="notice info"><b>Doble rol</b><span>Esta persona aparece como contratista del Estado y también en funciones públicas (cargo registrado en el SIGEP o supervisión u ordenación del gasto). Puede ser normal, por ejemplo, un contratista que luego fue nombrado. Compare fechas y entidades antes de sacar conclusiones.</span></div>' : ''}<div class="grid2">${pepCard}${provCard}</div>${funCard}${rlCard}${webCard}`;
+        bindNav(body);
+      } else if (ctx.tab === 'politica') {
+        politicsTab(ctx, body, ctx.doc, D.prov2.rows.map((r) => ({ nom: r.ent, nit: r.nit })));
+      } else {
+        body.innerHTML = `<div class="card"><h3>Contratos en que figura como supervisor u ordenador</h3>${D.list.ok ? '' : errBox(D.list)}<div id="ctable"></div>${qlink(D.list)}</div>`;
+        if (D.list.ok) contractTable($('#ctable'), D.list.rows);
+      }
     };
     draw();
   }
@@ -1428,8 +1799,12 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
         <div class="card"><h3>Avance reportado en el plan de ejecución</h3>${!ej.ok ? errBox(ej) : !ej.rows.length ? '<p class="muted">La entidad no ha registrado plan de ejecución para este contrato en SECOP II.</p>' : `<div class="tablewrap"><table><thead><tr><th>Entrega</th><th class="r">Esperado</th><th class="r">Real</th></tr></thead><tbody>${ej.rows.slice(-15).map((r) => `<tr><td>${esc(r.nombreplan)}<span class="sub">${fmtDate(r.fechadeentregaesperada)}</span></td><td class="r">${nf1.format(num(r.porcentajedeavanceesperado))} %</td><td class="r">${nf1.format(num(r.porcentaje_de_avance_real))} %</td></tr>`).join('')}</tbody></table></div>`}<p class="muted" style="font-size:.78rem">Es el avance que reporta la propia entidad en SECOP II, no un informe de interventoría.</p>${qlink(ej)}</div>
         <div class="card"><h3>Modificaciones registradas</h3>${!ad.ok ? errBox(ad) : !ad.rows.length ? '<p class="muted">Sin modificaciones registradas.</p>' : `<div class="tablewrap"><table><thead><tr><th>Fecha</th><th>Descripción</th></tr></thead><tbody>${ad.rows.map((r) => `<tr><td class="num">${fmtDate(r.fecharegistro)}</td><td>${esc(r.descripcion)}<span class="sub">${esc(r.tipo)} · ${esc(r.identificador)}</span></td></tr>`).join('')}</tbody></table></div>`}${qlink(ad)}</div>
       </div>
-      <div class="card"><h3>Multas y sanciones sobre este contrato</h3>${!mu.ok ? errBox(mu) : !mu.rows.length ? '<p class="muted">Ninguna registrada en SECOP II.</p>' : `<div class="tablewrap"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Estado</th><th class="r">Valor</th></tr></thead><tbody>${mu.rows.map((r) => `<tr><td>${fmtDate(r.fecha_evento)}</td><td>${esc(r.tipo_de_sancion)}</td><td>${esc(r.estado)}</td><td class="r">${fmtCOP(r.valor)}</td></tr>`).join('')}</tbody></table></div>`}${qlink(mu)}</div>`;
+      <div class="card"><h3>Multas y sanciones sobre este contrato</h3>${!mu.ok ? errBox(mu) : !mu.rows.length ? '<p class="muted">Ninguna registrada en SECOP II.</p>' : `<div class="tablewrap"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Estado</th><th class="r">Valor</th></tr></thead><tbody>${mu.rows.map((r) => `<tr><td>${fmtDate(r.fecha_evento)}</td><td>${esc(r.tipo_de_sancion)}</td><td>${esc(r.estado)}</td><td class="r">${fmtCOP(r.valor)}</td></tr>`).join('')}</tbody></table></div>`}${qlink(mu)}</div>
+      <div class="card"><h3>Informes y documentos del contrato</h3><div id="cdocs"><p class="loading">Buscando documentos publicados en SECOP II…</p></div></div>`;
     bindNav($('#cbody'));
+    if (!ctx.docs) { const docs = await loadDocs([ctx.id]); if (state.current !== ctx) return; ctx.docs = docs; }
+    if (state.current !== ctx || !$('#cdocs')) return;
+    docsPanel($('#cdocs'), ctx.docs, { defKind: 'all' });
   }
 
   // ---------------------------------------------------------------- Módulo 04 · Mapa de calor de Colombia
@@ -1843,6 +2218,8 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
       <div class="prose"><p class="lead">Todos los indicadores se calculan en su navegador con datos descargados en el momento desde la API oficial. Debajo de cada cifra está el enlace a la consulta exacta: ábrala y obtendrá los mismos datos.</p>
       <p>Los umbrales son referencias de RADAR, no estándares legales. Se escogieron para producir pocas señales y explicables, y se publicarán con su historial de cambios. Señal media o alta significa "vale la pena preguntar", nunca "hay corrupción".</p></div>
       <div class="grid3">${METHOD.map((m) => `<div class="card"><h3>${esc(m.t)}</h3><p class="muted" style="font-size:.9rem">${esc(m.d)}</p></div>`).join('')}</div>
+      <div class="card"><h3>Documentos y vínculos políticos</h3><ul class="prose"><li>Los informes, minutas, actas y demás archivos de cada contrato salen de los conjuntos "Archivos Descarga" de SECOP II (2021 a 2026). Cada enlace descarga el archivo desde SECOP. La categoría (informe, modificación, contrato, precontractual) se asigna por el nombre del archivo.</li><li>No se listan documentos personales del contratista (cédula, RUT, certificación bancaria, seguridad social, hoja de vida), aunque SECOP los publique.</li><li>Vínculos políticos: solo los registrados en fuentes oficiales, cruzados por número de documento. Hoy, aportes y candidaturas de 2019 (CNE, Cuentas Claras) y cargos registrados en el SIGEP. No se infiere militancia ni afinidad.</li><li>Redes sociales: RADAR no rastrea ni atribuye cuentas. Para personas con cargo público registrado ofrece búsquedas abiertas por nombre; la verificación es manual.</li></ul></div>
+      <div class="card"><h3>Búsqueda de personas</h3><ul class="prose"><li>Un nombre se busca como contratista en SECOP II y en SECOP Integrado (que incluye el histórico de SECOP I), como Persona Expuesta Políticamente registrada en el SIGEP y como supervisor, ordenador del gasto, ordenador de pago o representante legal en SECOP II.</li><li>La búsqueda ignora tildes y mayúsculas, tolera H, V/B, Z/S, Y/I y Ñ/N, y si no encuentra registros con todas las palabras prueba quitando una a la vez. Esas coincidencias se marcan como parciales.</li><li>Cada búsqueda dice qué fuentes consultó y si alguna no respondió: "la fuente no respondió" no es lo mismo que "no hay registros".</li><li>Límite: los servidores de planta que no son PEP ni aparecen en SECOP no están en datos abiertos; el directorio del SIGEP solo se consulta en la web de Función Pública. La búsqueda por cédula o NIT es exacta y es la más confiable.</li></ul></div>
       <div class="card"><h3>Reglas de rigor</h3><ul class="prose"><li>Identificadores antes que nombres: entidades por NIT, contratistas por número de documento. Dos registros con el mismo nombre y distinto documento se muestran por separado.</li><li>No se muestran cuentas bancarias, números de cédula de servidores, domicilios ni datos sensibles que SECOP publica; de personas naturales contratistas solo se muestran los últimos 4 dígitos del documento.</li><li>Valor contratado no es presupuesto ejecutado. Pagos registrados en SECOP II pueden estar incompletos.</li><li>Sanciones en estado "A la espera de aprobación" no son decisiones en firme.</li><li>Cuando una fuente falla, se dice. No hay datos de relleno.</li></ul></div></div>`);
   }
 
@@ -1856,9 +2233,12 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
     { g: 'Sanciones', n: 'SECOP II – Multas y sanciones', url: 'https://www.datos.gov.co/d/it5q-hg94', ep: '/resource/it5q-hg94.json', acc: 'API SODA', auth: 'No', freq: 'Diaria (ficha de Colombia Compra)', cors: 'Sí', back: 'Opcional', st: 'live', k: 'multas2' },
     { g: 'Sanciones', n: 'SECOP I – Multas y sanciones', url: 'https://www.datos.gov.co/d/4n4q-k399', ep: '/resource/4n4q-k399.json', acc: 'API SODA', auth: 'No', freq: 'Histórico', cors: 'Sí', back: 'Opcional', st: 'live', k: 'multas1' },
     { g: 'Contratación', n: 'Tienda Virtual del Estado Colombiano', url: 'https://www.datos.gov.co/', ep: 'Por verificar', acc: 'Datos abiertos (por verificar)', auth: '—', freq: '—', cors: '—', back: '—', st: 'pend' },
-    { g: 'Electoral', n: 'Cuentas Claras – CNE', url: 'https://www.cnecuentasclaras.gov.co/', ep: 'Sin API', acc: 'Consulta web y reportes', auth: '—', freq: 'Por campaña', cors: 'No', back: 'Sí: descarga oficial', st: 'pend' },
+    { g: 'Contratación', n: 'SECOP II – Archivos Descarga (2021 a 2026, seis conjuntos)', url: 'https://www.datos.gov.co/d/dmgg-8hin', ep: '/resource/dmgg-8hin.json y años anteriores', acc: 'API SODA', auth: 'No', freq: 'Diaria', cors: 'Sí', back: 'Opcional', st: 'live', k: 'arch26', note: 'Enlaces de descarga de informes, minutas, actas y demás documentos de cada contrato.' },
+    { g: 'Electoral', n: 'CNE – Cuentas Claras, ingresos de campañas 2019', url: 'https://www.datos.gov.co/d/jgra-rz2t', ep: '/resource/jgra-rz2t.json', acc: 'API SODA', auth: 'No', freq: 'Histórico', cors: 'Sí', back: 'Opcional', st: 'live', k: 'cne19', note: 'Aportantes y candidatos de las elecciones territoriales de 2019.' },
+    { g: 'Electoral', n: 'Cuentas Claras – CNE (2022 y 2023)', url: 'https://www.cnecuentasclaras.gov.co/', ep: 'Sin API', acc: 'Consulta web y reportes', auth: '—', freq: 'Por campaña', cors: 'No', back: 'Sí: descarga oficial', st: 'pend' },
     { g: 'Electoral', n: 'Registraduría – resultados', url: 'https://www.registraduria.gov.co/', ep: 'Por verificar', acc: 'Descargas de resultados', auth: '—', freq: 'Por elección', cors: 'No', back: 'Sí', st: 'pend' },
-    { g: 'Servidores y empresas', n: 'SIGEP II – Función Pública', url: 'https://www.funcionpublica.gov.co/', ep: 'Sin API', acc: 'Consulta pública individual', auth: '—', freq: '—', cors: 'No', back: 'Solo enlace', st: 'pend' },
+    { g: 'Servidores públicos', n: 'Personas Expuestas Políticamente (SIGEP) – Función Pública', url: 'https://www.datos.gov.co/d/3qxn-uc22', ep: '/resource/3qxn-uc22.json', acc: 'API SODA', auth: 'No', freq: 'Trimestral', cors: 'Sí', back: 'Opcional', st: 'live', k: 'pep', note: 'Cargos directivos, de manejo y de elección registrados por las entidades (Decreto 830 de 2021). No es el directorio completo de servidores.' },
+    { g: 'Servidores públicos', n: 'SIGEP II – directorio y hojas de vida', url: 'https://www.funcionpublica.gov.co/web/sigep2/directorio', ep: 'Sin API', acc: 'Consulta pública individual', auth: '—', freq: '—', cors: 'No', back: 'Solo enlace', st: 'pend' },
     { g: 'Control', n: 'Procuraduría (SIRI), Contraloría (boletín), Rama Judicial', url: 'https://www.procuraduria.gov.co/', ep: 'Sin API', acc: 'Certificados con documento y CAPTCHA', auth: '—', freq: '—', cors: 'No', back: 'Solo enlace', st: 'pend' },
   ];
   function renderSources() {
