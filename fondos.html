@@ -329,7 +329,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
     ordenador: ['Ordenador del gasto', 'El funcionario con facultad para comprometer el presupuesto de la entidad y firmar los contratos (alcalde, gobernador, secretario o delegado).'],
     supervisor: ['Supervisor', 'Funcionario de la entidad encargado de vigilar que el contrato se cumpla.'],
     replegal: ['Representante legal', 'Persona que firma y responde a nombre del fondo o contratista, según lo declarado en cada contrato de SECOP II.'],
-    tipoent: ['Tipo de entidad', 'Clasificación deducida del nombre de la entidad contratante: alcaldías y entidades municipales o distritales, gobernaciones y entidades departamentales, y otras (incluidas las nacionales).'],
+    tipoent: ['Quién contrata', 'Por defecto la app solo muestra a las alcaldías y gobernaciones con sus secretarías y dependencias (administración central). La clasificación se deduce del nombre de la entidad. Puede sumar las entidades descentralizadas (institutos, empresas, concejos) o ver todas, incluidas las nacionales como el SENA. En los proyectos de regalías, «alcaldía» son los aprobados para un municipio y «gobernación» los departamentales.'],
     sede: ['Municipio y departamento', 'Sede de la entidad contratante según SECOP. En las capitales incluye a la alcaldía, a la gobernación y a las entidades nacionales con oficina allí.'],
     relacion: ['Relación con un fondo', 'Un territorio se relaciona con un fondo mixto de dos formas: una entidad con sede allí le contrata (SECOP), o el fondo ejecuta un proyecto de regalías aprobado para ese territorio (DNP).'],
     regsecop: ['Regalías en el contrato', 'Valor que el contrato registra en SECOP II como financiado con el Sistema General de Regalías.'],
@@ -587,7 +587,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
   }
 
   // ---------------------------------------------------------------- Estado y filtros globales
-  const F = { pk: 'todo', dept: '', muni: '', et: 'all', mc: 'all', fondo: '', q: '', atip: false };
+  const F = { pk: 'todo', dept: '', muni: '', et: 'terr', mc: 'all', fondo: '', q: '', atip: false };
   let CORE = null; let loading = null;
   async function ensureCore() {
     const P = getPeriod(F.pk);
@@ -597,6 +597,12 @@ td.objeto { min-width: 260px; max-width: 460px; }
     return D;
   }
   const inTerr = (r) => (!F.dept || r._dep === F.dept) && (!F.muni || r._mun === F.muni);
+  // Administración central: la alcaldía o la gobernación y sus secretarías, sin entidades descentralizadas ni órganos de control
+  const DESC_RE = /INSTITUTO|CONCEJO|PERSONERIA|CONTRALORIA|ASAMBLEA|EMPRESA|\bESE\b|E\.S\.E|HOSPITAL|\bINDER|\bIMRD\b|UNIVERSI|INSTITUCION|COLEGIO|BELLAS ARTES|AGENCIA|ESTABLECIMIENTO|CORPORACION|TRANSITO|BOMBEROS|TERMINAL|AEROPUERTO|BIBLIOTECA|\bCANAL\b|FONDO DE|\bIPC\b|S\.A\.?S?\b|TAKESHIMA/;
+  const isCore = (r) => (r._core != null ? r._core : (r._core = (r._t === 'alc' || r._t === 'gob') && !DESC_RE.test(normTxt(r.nombre_entidad))));
+  const etOk = (r) => F.et === 'all' || (F.et === 'desc' ? r._t === 'alc' || r._t === 'gob' : isCore(r) && (F.et === 'terr' || r._t === F.et));
+  const ET_L = { terr: 'Alcaldías y gobernaciones', alc: 'Solo alcaldías', gob: 'Solo gobernaciones', desc: 'Alcaldías, gobernaciones y sus entidades descentralizadas', all: 'Todas las entidades (incluye nacionales)' };
+  const sgrEtOk = (r) => (F.et === 'alc' ? !!r._mun : F.et === 'gob' ? !r._mun : true);
   const sgrEk = (r) => r._ek || (r._ek = ejecKey(r.entidadejecutora));
   // Fondos que solo figuran como ejecutores de regalías (sin contratos en SECOP II)
   function ejecOnly(sgrRows) { const have = new Set(CORE.rows.map((r) => r._fk)); const m = new Map(); for (const r of sgrRows) { if (r._et !== 'fondo' || !r._ok) continue; const k = sgrEk(r); if (have.has(k)) continue; const g = m.get(k) || { key: k, nom: r.entidadejecutora, v: 0, n: 0 }; g.v += r._v; g.n++; m.set(k, g); } return [...m.values()].sort((a, b) => b.v - a.v); }
@@ -606,15 +612,15 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const base = D.rows.filter(inTerr);
     const atip = base.filter((r) => r._v >= ATIPICO);
     const pool = F.atip ? base : base.filter((r) => r._v < ATIPICO);
-    const rows = pool.filter((r) => (opts.noEt || F.et === 'all' || r._t === F.et || (F.et === 'otra' && r._t === 'nac')) && (opts.noMc || F.mc === 'all' || (F.mc === 'sin' ? SIN.has(r._m) : r._m === F.mc)) && (opts.noFondo || !F.fondo || r._fk === F.fondo) && (!qn || clean(`${r.nombre_entidad} ${r.proveedor_adjudicado} ${r.objeto_del_contrato} ${r.id_contrato}`).includes(qn)));
-    const sgr = D.sgr.rows.filter((r) => inTerr(r) && (opts.noFondo || !F.fondo || sgrEk(r) === F.fondo) && (!qn || clean(`${r.entidadejecutora} ${r.nombre} ${r.codigobpin} ${r.nomocad} ${r.sector}`).includes(qn)));
+    const rows = pool.filter((r) => (opts.noEt || etOk(r)) && (opts.noMc || F.mc === 'all' || (F.mc === 'sin' ? SIN.has(r._m) : r._m === F.mc)) && (opts.noFondo || !F.fondo || r._fk === F.fondo) && (!qn || clean(`${r.nombre_entidad} ${r.proveedor_adjudicado} ${r.objeto_del_contrato} ${r.id_contrato}`).includes(qn)));
+    const sgr = D.sgr.rows.filter((r) => inTerr(r) && (opts.noEt || sgrEtOk(r)) && (opts.noFondo || !F.fondo || sgrEk(r) === F.fondo) && (!qn || clean(`${r.entidadejecutora} ${r.nombre} ${r.codigobpin} ${r.nomocad} ${r.sector}`).includes(qn)));
     const s1 = D.s1.rows.filter(inTerr);
     const label = F.muni ? `${munShow(F.muni)}${F.dept ? ', ' + deptName(F.dept) : ''}` : F.dept ? deptName(F.dept) : 'todo el país';
     return { D, rows, pool, atip, sgr, s1, label };
   }
   function filterLabel() {
     const P = getPeriod(F.pk); const parts = [P.l, F.muni ? `${munShow(F.muni)}${F.dept ? ', ' + deptName(F.dept) : ''}` : F.dept ? deptName(F.dept) : 'Todo el país'];
-    if (F.et !== 'all') parts.push({ alc: 'Alcaldías y entidades municipales', gob: 'Gobernaciones y departamentales', otra: 'Otras entidades y nacionales' }[F.et]);
+    parts.push(ET_L[F.et] || ET_L.terr);
     if (F.mc !== 'all') parts.push(F.mc === 'sin' ? 'Sin competencia' : MODL[F.mc]);
     if (F.fondo && CORE) parts.push('Fondo: ' + fondoNom(F.fondo));
     if (F.q) parts.push(`Texto: «${F.q}»`);
@@ -655,7 +661,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
       <label><span>Periodo de firma</span><select id="f_pk">${periodOpts().map(([k, l]) => `<option value="${k}" ${F.pk === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
       <label><span>Departamento</span><select id="f_dept"><option value="">Todos</option>${DEPTS_SORTED.map((d) => `<option value="${d.code}" ${F.dept === d.code ? 'selected' : ''}>${esc(d.name)}</option>`).join('')}</select></label>
       <label><span>Municipio</span><select id="f_muni"><option value="">Todos</option>${muns.map((m) => `<option value="${esc(m)}" ${F.muni === m ? 'selected' : ''}>${esc(munShow(m))}${withRel.has(m) ? '' : ' · sin fondos mixtos'}</option>`).join('')}</select></label>
-      <label><span>Tipo de entidad</span><select id="f_et">${[['all', 'Todas'], ['alc', 'Alcaldías y municipales'], ['gob', 'Gobernaciones y departamentales'], ['otra', 'Otras y nacionales']].map(([k, l]) => `<option value="${k}" ${F.et === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label><span>Quién contrata${tip('tipoent')}</span><select id="f_et">${Object.entries(ET_L).map(([k, l]) => `<option value="${k}" ${F.et === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label><span>Modalidad</span><select id="f_mc">${[['all', 'Todas'], ['sin', 'Sin competencia'], ['dir', 'Solo directa'], ['int', 'Solo «interadministrativo»'], ['esp', 'Solo régimen especial'], ['comp', 'Con competencia']].map(([k, l]) => `<option value="${k}" ${F.mc === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label><span>Fondo</span><select id="f_fondo"><option value="">Todos</option>${fonds.map((f) => `<option value="${esc(f.key)}" ${F.fondo === f.key ? 'selected' : ''}>${esc(titleCase(f.nom).slice(0, 60))}</option>`).join('')}${eo.length ? `<optgroup label="Solo ejecutan regalías (sin contratos en SECOP II)">${eo.map((f) => `<option value="${esc(f.key)}" ${F.fondo === f.key ? 'selected' : ''}>${esc(titleCase(f.nom).slice(0, 60))}</option>`).join('')}</optgroup>` : ''}</select></label>
       <label class="fq"><span>Buscar fondo, entidad, proyecto u objeto</span><span class="fqrow"><input id="f_q" type="search" list="f_qlist" value="${esc(F.q)}" placeholder="Escriba y pulse Buscar…" autocomplete="off"><button type="button" class="btn primary sm" id="f_qgo">Buscar</button>${F.q ? '<button type="button" class="btn sm" id="f_qx">Limpiar</button>' : ''}</span><datalist id="f_qlist">${names.map((n) => `<option value="${esc(n)}"></option>`).join('')}</datalist></label>`;
