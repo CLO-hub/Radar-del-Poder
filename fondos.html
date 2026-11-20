@@ -1437,6 +1437,51 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const v = $('#camA_v'); if (!v) return;
     loadCaminoA(getPeriod(F.pk)).then(() => { const el = $('#camA_v'); if (!el) return; const A = camAScope(); el.textContent = fmtCOP(A.tot); el.title = fullCOP(A.tot); $('#camA_s').textContent = CAMA.D.ok ? `${fmtN(A.n)} contratos con regalías · SECOP II` : 'SECOP II no respondió'; });
   }
+  // ---------------------------------------------------------------- Base madre: todo lo cargado, sin filtros, en un solo Excel
+  async function exportMaster(btn) {
+    if (typeof XLSX === 'undefined') return toast('No cargó la librería de Excel; revise la conexión.');
+    const lab = btn ? btn.textContent : ''; if (btn) { btn.disabled = true; btn.textContent = 'Preparando la base completa…'; }
+    try {
+      const D = CORE && CORE.P.k === 'todo' ? CORE : await loadCore(getPeriod('todo'));
+      const core = (r) => (r._t === 'alc' || r._t === 'gob') && !DESC_RE.test(normTxt(r.nombre_entidad));
+      const contratos = D.rows.map((r) => ({ Sistema: r._src || 'SECOP II', 'Año de firma': r._y || '', 'Camino de gasto': 'B · contrato con fondo mixto', ...contractRow(r), 'Alcaldía o gobernación (administración central)': core(r) ? 'Sí' : 'No', 'Reporta regalías': r._sgr > 0 ? 'Sí' : 'No', 'Valor atípico (≥ $50.000 millones)': r._v >= ATIPICO ? 'Sí' : 'No', 'Clave del fondo': r._fk }));
+      const proyectos = D.sgr.rows.map((r) => ({ 'Camino de gasto': 'C · fondo mixto como ejecutor', 'De quién es el proyecto': r._mun ? 'Alcaldía (municipal)' : 'Gobernación u órgano regional', Vigente: r._ok ? 'Sí' : 'No (desaprobado)', ...sgrRow(r), 'Brecha pagos − obra (puntos)': r.ejecucionfisica != null && r.ejecucionfinanciera != null ? r._gap : '', 'Clave del fondo': ejecKey(r.entidadejecutora) }));
+      const agg = (rows, keyFn, init) => groupBy(rows, keyFn, init);
+      const ents = agg(D.rows, (r) => r.nit_entidad || r.nombre_entidad, (r) => ({ nom: r.nombre_entidad, nit: r.nit_entidad, t: r._t, dep: r._dep, mun: r._mun, core: core(r) })).map((e) => { const tf = topOf(e.fondos); return { Entidad: e.nom, NIT: e.nit, 'Tipo de entidad': ENT_T[e.t], 'Administración central': e.core ? 'Sí' : 'No', Departamento: deptName(e.dep), Municipio: munShow(e.mun), Contratos: e.n, 'Valor contratado con fondos': e.v, 'Regalías (SGR)': e.sgr, 'Contratación directa': e.by.dir || 0, '«Interadministrativo»': e.by.int || 0, 'Régimen especial': e.by.esp || 0, 'Con competencia': e.by.comp || 0, '% sin competencia': Math.round(sinShare(e) * 1000) / 10, 'Fondos distintos': e.fondos.size, 'Fondo principal': tf[0] ? tf[0].nom : '', '% en fondo principal': tf[0] && e.v ? Math.round((tf[0].v / e.v) * 1000) / 10 : '', 'Contratos con alerta': e.al, 'Primer contrato': e.f1, 'Último contrato': e.f2 }; });
+      const ejec = new Map(); for (const r of D.sgr.rows) { if (!r._ok) continue; const k = ejecKey(r.entidadejecutora); const g = ejec.get(k) || { nom: r.entidadejecutora, n: 0, v: 0, ade: 0, terr: new Set() }; g.n++; g.v += r._v; if (r._gap >= 30) g.ade++; g.terr.add(r.nomocad); ejec.set(k, g); }
+      const fm = new Map();
+      for (const f of agg(D.rows, (r) => r._fk, (r) => ({ nom: r.proveedor_adjudicado, doc: r.documento_proveedor }))) fm.set(f.key, f);
+      const fondos = [...new Set([...fm.keys(), ...ejec.keys()])].map((k) => { const f = fm.get(k); const e = ejec.get(k); const te = f ? topOf(f.ents) : []; return { Fondo: f ? f.nom : e.nom, 'NIT o clave': k, 'Contratos recibidos (camino B)': f ? f.n : 0, 'Valor recibido por contratos': f ? f.v : 0, 'Regalías en esos contratos': f ? f.sgr : 0, '% sin competencia': f ? Math.round(sinShare(f) * 1000) / 10 : '', 'Entidades que le contratan': f ? f.ents.size : 0, 'Municipios': f ? f.muns.size : 0, 'Entidad principal': te[0] ? te[0].nom : '', 'Proyectos de regalías como ejecutor (camino C)': e ? e.n : 0, 'Valor de esos proyectos': e ? e.v : 0, 'Proyectos con pagos adelante de la obra': e ? e.ade : 0, 'Territorios donde es ejecutor': e ? e.terr.size : 0, 'Total caminos B + C': (f ? f.v : 0) + (e ? e.v : 0), 'Primer contrato': f ? f.f1 : '', 'Último contrato': f ? f.f2 : '' }; }).sort((a, b) => b['Total caminos B + C'] - a['Total caminos B + C']);
+      const rel = agg(D.rows, (r) => (r.nit_entidad || r.nombre_entidad) + '→' + r._fk, (r) => ({ ent: r.nombre_entidad, nit: r.nit_entidad, t: r._t, dep: r._dep, mun: r._mun, fo: r.proveedor_adjudicado, doc: r.documento_proveedor })).map((g) => ({ Entidad: g.ent, 'NIT entidad': g.nit, 'Tipo de entidad': ENT_T[g.t], Departamento: deptName(g.dep), Municipio: munShow(g.mun), Fondo: g.fo, 'NIT fondo': g.doc, Contratos: g.n, Valor: g.v, 'Regalías (SGR)': g.sgr, '% sin competencia': Math.round(sinShare(g) * 1000) / 10, 'Contratos con alerta': g.al, 'Primer contrato': g.f1, 'Último contrato': g.f2 }));
+      const tm = new Map(); const tg = (dep, mun) => { const k = dep + '|' + mun; let g = tm.get(k); if (!g) { g = { Departamento: deptName(dep), Municipio: mun ? munShow(mun) : '(departamental o sin municipio)', 'Contratos con fondos': 0, 'Valor contratado con fondos': 0, 'Regalías en esos contratos': 0, 'Valor sin competencia': 0, 'Proyectos con fondo ejecutor': 0, 'Valor de esos proyectos': 0 }; tm.set(k, g); } return g; };
+      for (const r of D.rows) { const g = tg(r._dep, r._mun); g['Contratos con fondos']++; g['Valor contratado con fondos'] += r._v; g['Regalías en esos contratos'] += r._sgr; if (SIN.has(r._m)) g['Valor sin competencia'] += r._v; }
+      for (const r of D.sgr.rows) { if (!r._ok) continue; const g = tg(r._dep, r._mun); g['Proyectos con fondo ejecutor']++; g['Valor de esos proyectos'] += r._v; }
+      const terr = [...tm.values()].sort((a, b) => (b['Valor contratado con fondos'] + b['Valor de esos proyectos']) - (a['Valor contratado con fondos'] + a['Valor de esos proyectos']));
+      const wb = XLSX.utils.book_new();
+      const lea = [['Fondos Mixtos y Regalías · Base completa'], [`Generada el ${new Date().toLocaleString('es-CO')} con datos abiertos oficiales consultados en vivo (datos.gov.co).`], [''],
+        ['Qué contiene: todo lo que carga la aplicación, sin ningún filtro. Todo el histórico de SECOP I y II, todas las entidades (incluidas las nacionales y descentralizadas) y todos los fondos.'], [''],
+        [`Contratos: ${fmtN(contratos.length)} contratos y convenios entre entidades públicas y fondos mixtos (camino B). Una fila por contrato.`],
+        [`Proyectos de regalías: ${fmtN(proyectos.length)} proyectos del Sistema General de Regalías con un fondo mixto como entidad ejecutora (camino C). Una fila por proyecto.`],
+        ['Entidades, Fondos, Relaciones y Territorios: resúmenes calculados a partir de las dos hojas anteriores.'], [''],
+        ['Cómo filtrar: cada hoja tiene filtro en la fila de encabezados. Para ver solo alcaldías y gobernaciones use la columna «Alcaldía o gobernación (administración central)» = Sí.'],
+        ['Valores atípicos: los contratos de $50.000 millones o más están incluidos y marcados; muchos son errores de digitación en SECOP. Fíltrelos antes de sumar.'],
+        ['Regalías: SECOP II trae cuánto de cada contrato se pagó con regalías; SECOP I no trae ese dato, por eso en sus contratos aparece 0.'],
+        ['El camino A (la entidad contrata ella misma, sin fondos) no está en esta base: no involucra fondos mixtos. Se consulta en la aplicación con el filtro «Mecanismo de gasto».'],
+        ['Los proyectos del DNP no traen fecha; el año se puede deducir de los cuatro primeros dígitos del BPIN.'], [''],
+        ['Fuentes: SECOP I y II (Colombia Compra Eficiente), Proyectos SGR y fuentes de financiación (DNP) y Ejecución de regalías (MinHacienda).'],
+        ['Las alertas son señales para investigar, no pruebas de irregularidad.']];
+      const ws0 = XLSX.utils.aoa_to_sheet(lea); ws0['!cols'] = [{ wch: 150 }]; XLSX.utils.book_append_sheet(wb, ws0, 'Léame');
+      const add = (name, rows) => {
+        const ws = rows.length ? XLSX.utils.json_to_sheet(rows) : XLSX.utils.aoa_to_sheet([['Sin registros.']]);
+        if (rows.length) { const keys = Object.keys(rows[0]); ws['!cols'] = keys.map((k) => ({ wch: /objeto|proyecto$/i.test(k) ? 70 : Math.min(46, Math.max(11, k.length + 2, ...rows.slice(0, 120).map((r) => Math.min(46, String(r[k] ?? '').length + 1)))) })); ws['!autofilter'] = { ref: ws['!ref'] }; }
+        XLSX.utils.book_append_sheet(wb, ws, name);
+      };
+      add('Contratos', contratos); add('Proyectos de regalías', proyectos); add('Entidades', ents); add('Fondos', fondos); add('Relaciones entidad–fondo', rel); add('Territorios', terr);
+      const gl = Object.values(G).map(([t, d]) => ({ 'Término': t, Significado: d })); const wsg = XLSX.utils.json_to_sheet(gl); wsg['!cols'] = [{ wch: 44 }, { wch: 140 }]; XLSX.utils.book_append_sheet(wb, wsg, 'Glosario');
+      XLSX.writeFile(wb, `fondos_mixtos_base_completa_${stamp()}.xlsx`); toast(`Base completa descargada: ${fmtN(contratos.length)} contratos y ${fmtN(proyectos.length)} proyectos.`);
+    } catch (e) { toast('No fue posible armar la base: ' + e.message); }
+    if (btn) { btn.disabled = false; btn.textContent = lab; }
+  }
 
   // ---------------------------------------------------------------- Descargas: CSV, Excel y PDF
   const stamp = () => isoDay(new Date());
@@ -1535,6 +1580,8 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const m = document.createElement('div'); m.className = 'modal'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true');
     const grp = (g, t) => { const ts = X.tables.filter((x) => x.g === g); return ts.length ? `<div class="stack" style="gap:6px"><span class="eyebrow">${t}</span><div class="optgrid">${ts.map((x) => `<label class="opt"><input type="checkbox" name="tb" value="${x.k}" ${x.rows.length ? '' : 'disabled'} ${g === 'desc' && x.rows.length ? 'checked' : ''}><span><b>${esc(x.l)}</b>${fmtN(x.rows.length)} filas</span></label>`).join('')}</div></div>` : ''; };
     m.innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h3>Descargar</h3><button class="btn sm" data-x>Cerrar</button></div>
+      <div class="notice info"><b>Base completa en Excel</b><span>Todo lo que carga la aplicación, sin filtros: todos los contratos de SECOP I y II con fondos mixtos, todos los proyectos de regalías con un fondo como ejecutor, todas las entidades y todos los fondos. Cada hoja trae filtros en los encabezados.</span><button class="btn lime" id="dl_master" style="width:fit-content">⬇ Descargar la base completa</button></div>
+      <span class="eyebrow">O descargue solo la selección actual</span>
       <p class="muted" style="font-size:.85rem"><b style="color:var(--ink)">${esc(X.title)}</b><br>${esc(X.sel)}</p>
       <div class="stack" style="gap:6px"><span class="eyebrow">Formato</span><div class="optgrid">
         <label class="opt"><input type="radio" name="fmt" value="xlsx" checked><span><b>Excel (.xlsx)</b>Un libro con una hoja por tabla, hallazgos y glosario</span></label>
@@ -1548,6 +1595,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const note = () => { const f = m.querySelector('[name=fmt]:checked').value; m.querySelector('#x_note').textContent = f === 'pdf' ? 'Se abrirá el diálogo de impresión: elija «Guardar como PDF» como destino. Las tablas largas se resumen a 60 filas.' : f === 'csv' ? 'CSV con separador punto y coma y codificación UTF-8 (abre bien en Excel en español). El análisis no se incluye en CSV.' : 'Incluye todas las filas y columnas de cada tabla marcada.'; };
     m.querySelectorAll('[name=fmt]').forEach((r) => { r.onchange = note; }); note();
     const close = () => m.remove();
+    m.querySelector('#dl_master').onclick = (e) => exportMaster(e.currentTarget);
     m.onclick = (e) => { if (e.target === m || e.target.closest('[data-x]')) close(); };
     m.querySelector('[data-all]').onclick = () => m.querySelectorAll('[name=tb]:not(:disabled)').forEach((c) => { c.checked = true; });
     m.querySelector('[data-go-x]').onclick = () => { const fmt = m.querySelector('[name=fmt]:checked').value; const picked = [...m.querySelectorAll('[name=tb]:checked')].map((c) => c.value); const an = m.querySelector('#x_an').checked; if (!picked.length && !(fmt === 'pdf' && an)) return toast('Marque al menos una tabla'); close(); doExport(fmt, X, picked, an); };
