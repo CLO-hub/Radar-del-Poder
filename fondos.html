@@ -699,7 +699,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
         <div class="kpi"><span class="l">Fondos con contratos</span><span class="v">${fmtN(fondos.length)}</span><span class="s">${fmtN(new Set(R.map((r) => r._mun).filter(Boolean)).size)} municipios</span></div>
         <div class="kpi"><span class="l">Regalías ejecutadas por fondos${tip('ejecutor')}</span><span class="v">${fmtCOP(sum(sg, '_v'))}</span><span class="s">${fmtN(sg.length)} proyectos · DNP</span></div>
       </div>
-      ${!R.length ? '<div class="card"><p class="muted">No hay contratos con fondos mixtos para esta selección. Amplíe el periodo, quite filtros o revise otro territorio.</p></div>' : `
+      ${!R.length ? (sg.length ? `<div class="notice info"><b>Sin contratos en SECOP II, pero con regalías ejecutadas por fondos mixtos${tip('ejecutor')}</b><span>Ninguna entidad con sede en ${esc(sc.label)} registra contratos con fondos mixtos en SECOP II para esta selección. Aun así, el DNP registra ${fmtN(sg.length)} proyecto(s) de regalías de este territorio, por ${fmtCOP(sum(sg, '_v'))}, con un fondo mixto como entidad ejecutora. En esa figura el fondo no aparece como contratista de la entidad territorial, sino como ejecutor del proyecto: recibe los recursos de regalías y contrata por su cuenta, por derecho privado. Los proyectos están abajo; lo que el fondo contrató se ve en su ficha, pestaña «Convocatorias y contratación propia», solo si lo publicó en SECOP II.</span></div>` : '<div class="card"><p class="muted">No hay contratos con fondos mixtos ni proyectos de regalías ejecutados por fondos para esta selección. Amplíe el periodo, quite filtros o revise otro territorio.</p></div>') : `
       <div class="card"><h3>Lo que muestran los datos</h3><ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">${ins.map((t) => `<li>${t}</li>`).join('')}</ul></div>
       <div class="grid2">
         <div class="card"><h3>Por año y modalidad</h3>${modLegend()}<div class="bars">${years.map((y) => barRow(String(y.y), modParts(y.by), maxY, `${fmtCOP(y.v)} · ${fmtN(y.n)}`)).join('')}</div></div>
@@ -710,8 +710,10 @@ td.objeto { min-width: 260px; max-width: 460px; }
         <div class="card"><h3>Fondos que más reciben</h3><div class="bars">${fondos.slice(0, 12).map((f) => barRow(f.nom, modParts(f.by), fondos[0].v, fmtCOP(f.v), `data-fondo="${esc(f.key)}" data-name="${esc(f.nom)}"`)).join('')}</div><button class="btn sm" data-go="fondos" style="width:fit-content">Ver los ${fmtN(fondos.length)} fondos →</button></div>
       </div>
       <div class="card"><h3>Flujo de recursos: entidad → fondo${tip('relacion')}</h3><div id="flow"></div><p class="muted" style="font-size:.78rem">El grosor de cada línea es proporcional al valor contratado. Toque una entidad o un fondo para abrir su ficha.</p></div>`}
+      ${sc.sgr.length ? `<div class="card"><h3>Proyectos de regalías ejecutados por fondos mixtos${tip('ejecutor')}</h3><p class="muted" style="font-size:.85rem">Proyectos aprobados para ${esc(sc.label)} en los que un fondo mixto es la entidad ejecutora. Toque el nombre del fondo para abrir su ficha.</p><div id="pansgr"></div>${qlink(sc.D.sgr)}</div>` : ''}
       ${qlink(sc.D.a)}</div>`;
     if (R.length) flowChart($('#flow'), R);
+    if ($('#pansgr')) sgrTable($('#pansgr'), sc.sgr, {});
     bindAtip();
   }
 
@@ -862,6 +864,12 @@ td.objeto { min-width: 260px; max-width: 460px; }
 
   // ---------------------------------------------------------------- Tabla de proyectos de regalías
   const famBadges = (r) => (r._f || []).slice(0, 4).map((x) => `<span class="sub"><span class="badge ${sgrFamily(x.nombrefondo) === 'Asignaciones directas' ? 'media' : 'live'}">${esc(sgrFamily(x.nombrefondo))}</span> aporta ${esc(titleCase(x.nombreentidad || '—'))}: ${fmtCOP(x.recursosaprobadosasignadosspgr)} aprobados, ${fmtCOP(x.apropiacionpagada)} pagados</span>`).join('');
+  // Clave de ficha para un ejecutor del DNP: NIT si es un fondo de la lista verificada o si su nombre coincide con un contratista de SECOP
+  function ejecKey(e) {
+    const n = normTxt(e); const seed = SEEDS.find((s) => s[2].some((a) => n.includes(a))); if (seed) return seed[0];
+    if (CORE) { const c = clean(e); const hit = CORE.rows.find((r) => clean(r.proveedor_adjudicado) === c); if (hit) return hit._fk; }
+    return clean(e);
+  }
   function sgrTable(box, rowsAll, opts = {}) {
     const st = opts.st || (box._st = box._st || { est: 'valid', fam: 'all', ej: 'all' });
     const draw = () => {
@@ -876,7 +884,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
         <div class="tb"></div>
         <p class="muted" style="font-size:.78rem">Fuente: DNP (proyecto, ejecutor, OCAD, estado y avances) y Hacienda (fuente, entidad que aporta y pagos; solo bienio 2025–2026, por eso algunos proyectos quedan «sin dato de fuente»). El DNP no publica fechas, así que estos proyectos no se filtran por periodo.</p></div>`;
       dataTable(box.querySelector('.tb'), rows, [
-        { k: 'n', l: 'Proyecto', cls: 'objeto', val: (r) => r.nombre || '', html: (r) => `${esc(String(r.nombre || '').slice(0, 190))}<span class="sub mono">BPIN${tip('bpin')} ${esc(r.codigobpin)}${r.sector ? ' · ' + esc(titleCase(r.sector)) : ''}</span>${opts.single ? '' : `<span class="sub">Ejecuta: ${r._et === 'fondo' ? `<span class="badge alta">fondo mixto</span> ` : ''}${esc(titleCase(r.entidadejecutora))}${r.interventor ? ' · Interventor: ' + esc(titleCase(r.interventor)) : ''}</span>`}${famBadges(r)}` },
+        { k: 'n', l: 'Proyecto', cls: 'objeto', val: (r) => r.nombre || '', html: (r) => `${esc(String(r.nombre || '').slice(0, 190))}<span class="sub mono">BPIN${tip('bpin')} ${esc(r.codigobpin)}${r.sector ? ' · ' + esc(titleCase(r.sector)) : ''}</span>${opts.single ? '' : `<span class="sub">Ejecuta: ${r._et === 'fondo' ? `<span class="badge alta">fondo mixto</span> <button class="linkbtn" data-fondo="${esc(ejecKey(r.entidadejecutora))}" data-name="${esc(r.entidadejecutora)}">${esc(titleCase(r.entidadejecutora))}</button>` : esc(titleCase(r.entidadejecutora))}${r.interventor ? ' · Interventor: ' + esc(titleCase(r.interventor)) : ''}</span>`}${famBadges(r)}` },
         { k: 'o', l: 'Territorio', tip: 'ocad', sort: true, val: (r) => r.nomocad || '', html: (r) => esc(titleCase(r.nomocad || '—')) },
         { k: 'e', l: 'Estado', sort: true, val: (r) => r.estado || '', html: (r) => esc(titleCase(r.estado || '—')) },
         { k: 'v', l: 'Valor total', r: true, sort: true, val: (r) => r._v, html: (r) => `<span title="${fullCOP(r._v)}">${fmtCOP(r._v)}</span>` },
@@ -940,7 +948,8 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const none = (ds) => Promise.resolve({ ok: true, rows: [], ds });
     const seed = SEEDS.find((s) => s[0] === ctx.key);
     const pool = [...new Set(CORE.sgr.rows.map((r) => r.entidadejecutora))];
-    const ejecs = seed ? pool.filter((e) => seed[2].some((a) => normTxt(e).includes(a))) : ejecMatch(ctx.name, pool);
+    const exact = pool.filter((e) => clean(e) === clean(ctx.name));
+    const ejecs = seed ? pool.filter((e) => seed[2].some((a) => normTxt(e).includes(a))) : exact.length ? exact : ejecMatch(ctx.name, pool);
     const jobs = {
       recv: hasDoc ? part('contratos', { select: FS, where: `documento_proveedor in (${vs})`, order: 'fecha_de_firma DESC', limit: 10000 }) : none('contratos'),
       s1: hasDoc ? part('integrado', { select: 'nombre_de_la_entidad,municipio_entidad,departamento_entidad,numero_del_contrato,objeto_a_contratar,modalidad_de_contrataci_n,valor_contrato,fecha_de_firma_del_contrato,url_contrato', where: `origen='SECOPI' AND documento_proveedor in (${vs})`, order: 'fecha_de_firma_del_contrato DESC', limit: 5000 }) : none('integrado'),
