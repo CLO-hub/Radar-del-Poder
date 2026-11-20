@@ -77,6 +77,8 @@ p { margin: 0; }
 .hero h1 span { color: var(--lime); }
 .hero p { color: var(--band-muted); max-width: 72ch; margin-top: 8px; }
 .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; padding-top: 6px; padding-bottom: 14px; align-items: end; }
+.filters label.fq { grid-column: span 2; } .fqrow { display: flex; gap: 6px; align-items: center; } .fqrow input { flex: 1; } .fqrow .btn { white-space: nowrap; }
+@media (max-width: 520px) { .filters label.fq { grid-column: auto; } }
 .filters label, .field { display: flex; flex-direction: column; gap: 4px; font-size: var(--s-xs); }
 .filters label > span { font-family: var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--band-muted); font-size: .7rem; }
 .filters select, .filters input { font: var(--s-sm) var(--f-body); padding: 8px 10px; border-radius: 9px; border: 1.5px solid var(--band-line); background: #1E1D2E; color: var(--band-ink); min-width: 0; width: 100%; }
@@ -233,6 +235,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
     integrado: { id: 'rpmr-utcd', nombre: 'SECOP Integrado (SECOP I y II)' },
     sgr: { id: 'mzgh-shtp', nombre: 'DNP – Proyectos del Sistema General de Regalías' },
     sgrej: { id: 'br9a-gygu', nombre: 'Hacienda – Ejecución financiera de regalías por proyecto' },
+    sgrfin: { id: 'v4ap-cvae', nombre: 'DNP – Fuentes de financiación por proyecto (todas las vigencias)' },
     sgrpre: { id: 'g4qj-2p2e', nombre: 'Hacienda – Presupuesto de regalías por fuente' },
     arch21: { id: 'f8va-cf4m', nombre: 'SECOP II – Archivos (hasta 2021)' }, arch22: { id: 'kgcd-kt7i', nombre: 'SECOP II – Archivos 2022' }, arch23: { id: '3skv-9na7', nombre: 'SECOP II – Archivos 2023' },
     arch24: { id: 'nbae-kzan', nombre: 'SECOP II – Archivos 2024' }, arch25: { id: 'h4m3-b4e2', nombre: 'SECOP II – Archivos 2025' }, arch26: { id: 'dmgg-8hin', nombre: 'SECOP II – Archivos 2026' },
@@ -263,7 +266,8 @@ td.objeto { min-width: 260px; max-width: 460px; }
   function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3200); }
   // Nombre canónico de municipio: une variantes entre SECOP, DNP y Hacienda
   function canonMun(s) {
-    let n = clean(s); if (!n || /^NO DEFINIDO|^NINGUNO$/.test(n)) return '';
+    let n = clean(String(s || '').replace(/\s*\(.*?\)\s*/g, ' ')); if (!n || /^NO DEFINIDO|^NINGUNO$/.test(n)) return '';
+    if (/PORTUARIO DE BARR/.test(n)) return 'BARRANQUILLA';
     n = n.replace(/^SANTIAGO DE CALI$/, 'CALI').replace(/^SAN JOSE DE CUCUTA$/, 'CUCUTA').replace(/^CARTAGENA DE INDIAS$/, 'CARTAGENA').replace(/^BOGOTA D ?C$|^DISTRITO CAPITAL( DE BOGOTA)?$/, 'BOGOTA').replace(/^.*DISTRITO .* DE (BARRANQUILLA|BUENAVENTURA|CARTAGENA|SANTA MARTA|RIOHACHA|TUMACO|MOMPOX|TURBO|MEDELLIN|CALI)$/, '$1');
     return n;
   }
@@ -457,7 +461,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
     if (/PAZ/.test(n)) return 'Asignación para la paz';
     if (/ASIGNACIONES DIRECTAS|ASIGNACION DIRECTA/.test(n)) return 'Asignaciones directas';
     if (/INVERSION LOCAL/.test(n)) return 'Inversión local';
-    if (/INVERSION REGIONAL/.test(n)) return 'Inversión regional';
+    if (/INVERSION REGIONAL|COMPENSACION REGIONAL|DESARROLLO REGIONAL/.test(n)) return 'Inversión regional';
     if (/AMBIENT|CONSERVACION|CORPORACION AUTONOMA/.test(n)) return 'Ambiental';
     if (/PUEBLO|COMUNIDADES|RROM/.test(n)) return 'Pueblos étnicos';
     return 'Otra';
@@ -538,9 +542,32 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const parts = await Promise.all(chunks.map((c) => part('sgrej', { select: 'codigobpin,vigencia,codigofondo,nombrefondo,nombreentidad,recursosaprobadosasignadosspgr,apropiacionrp,apropiacionpagada', where: `codigobpin in (${c.map(sqlStr).join(',')})`, limit: 5000 })));
     const m = new Map(); for (const p of parts) for (const r of p.rows) { const a = m.get(r.codigobpin) || []; a.push(r); m.set(r.codigobpin, a); }
     for (const r of rows) { r._f = m.get(r.codigobpin) || []; r._fam = [...new Set(r._f.map((x) => sgrFamily(x.nombrefondo)))]; }
-    return { ok: parts.every((p) => p.ok), failed: parts.filter((p) => !p.ok).length, n: chunks.length };
+    // Fuentes de todas las vigencias (DNP): cubre los bienios que Hacienda ya no publica
+    const dparts = await Promise.all(chunks.map((c) => part('sgrfin', { select: FIN_SEL, where: `bpin in (${c.map(sqlStr).join(',')}) AND fuentedefinanciaci_n like 'SGR%'`, limit: 50000 })));
+    applyFin(rows, dparts.flatMap((p) => p.rows));
+    return { ok: parts.every((p) => p.ok), failed: parts.filter((p) => !p.ok).length, n: chunks.length, okFin: dparts.every((p) => p.ok) };
   }
-  function decorateSgr(r) { r._dep = sgrDept(r); r._mun = sgrMuni(r); r._ok = sgrValid(r); r._et = ejType(r.entidadejecutora); r._v = num(r.valortotal); r._gap = num(r.ejecucionfinanciera) - num(r.ejecucionfisica); if (!r._f) { r._f = []; r._fam = []; } return r; }
+  const FIN_SEL = 'bpin,vigencia,tiporecursofuentefinanciacion,entidadfuentefinanciacion,valorsolicitado,valorpagado';
+  const BIENIOS = ['2025–2026', '2023–2024', '2021–2022', 'Anteriores'];
+  const bienioOf = (v) => { const y = +String(v || '').slice(0, 4); if (!y) return ''; const a = y % 2 ? y : y - 1; return a >= 2021 ? `${a}–${a + 1}` : 'Anteriores'; };
+  // Agrupa las filas del DNP por proyecto y fuente. El valor se expresa como participación, porque el conjunto repite montos entre vigencias.
+  function applyFin(rows, fin) {
+    const m = new Map(); for (const x of fin) { const a = m.get(x.bpin) || []; a.push(x); m.set(x.bpin, a); }
+    for (const r of rows) {
+      const list = m.get(r.codigobpin) || []; const g = new Map(); const bi = new Set(); const big = new Map();
+      for (const x of list) {
+        const t = String(x.tiporecursofuentefinanciacion || '').replace(/^SGR\s*[-–]?\s*/i, '').trim() || 'Sin dato'; const k = t + '|' + (x.entidadfuentefinanciacion || '');
+        const o = g.get(k) || { tipo: t, fam: sgrFamily(t), ent: String(x.entidadfuentefinanciacion || '').replace(/,(?=\S)/g, ', '), sol: 0, pag: 0, bi: new Set() };
+        const sv = num(x.valorsolicitado), pv = num(x.valorpagado); o.sol += sv; o.pag += pv; const b = bienioOf(x.vigencia); if (b && (sv || pv)) { o.bi.add(b); bi.add(b); big.set(b, (big.get(b) || 0) + (sv || pv)); } g.set(k, o);
+      }
+      const arr = [...g.values()]; const useSol = arr.some((o) => o.sol > 0); const tot = arr.reduce((s, o) => s + (useSol ? o.sol : o.pag), 0);
+      for (const o of arr) { o.share = tot ? (useSol ? o.sol : o.pag) / tot : 0; o.bis = BIENIOS.filter((b) => o.bi.has(b)); }
+      r._fd = arr.filter((o) => o.share > 0 || !tot).sort((a, b) => b.share - a.share);
+      r._bi = BIENIOS.filter((b) => bi.has(b)); if (!r._bi.length && (r._f || []).length) r._bi = ['2025–2026'];
+      r._fam = [...new Set([...(r._fam || []), ...r._fd.map((o) => o.fam)])];
+    }
+  }
+  function decorateSgr(r) { r._dep = sgrDept(r); r._mun = sgrMuni(r); r._ok = sgrValid(r); r._et = ejType(r.entidadejecutora); r._v = num(r.valortotal); r._gap = num(r.ejecucionfinanciera) - num(r.ejecucionfisica); if (!r._f) { r._f = []; r._fam = []; } if (!r._fd) r._fd = []; if (!r._bi) r._bi = []; return r; }
   async function loadCore(P) {
     const W = periodWhere('fecha_de_firma', P); const nits = fondoNits().flatMap(docVariants);
     const sgrW = ['MIXTO', 'GESPRODE', 'FONPACIFICO', 'FONCOLOMBIA', 'FINVERPAZ', 'FOMIDES', 'FOMINDETER', 'FOMCULTURA'].map((w) => `upper(entidadejecutora) like '%${w}%'`).join(' OR ');
@@ -570,13 +597,17 @@ td.objeto { min-width: 260px; max-width: 460px; }
     return D;
   }
   const inTerr = (r) => (!F.dept || r._dep === F.dept) && (!F.muni || r._mun === F.muni);
+  const sgrEk = (r) => r._ek || (r._ek = ejecKey(r.entidadejecutora));
+  // Fondos que solo figuran como ejecutores de regalías (sin contratos en SECOP II)
+  function ejecOnly(sgrRows) { const have = new Set(CORE.rows.map((r) => r._fk)); const m = new Map(); for (const r of sgrRows) { if (r._et !== 'fondo' || !r._ok) continue; const k = sgrEk(r); if (have.has(k)) continue; const g = m.get(k) || { key: k, nom: r.entidadejecutora, v: 0, n: 0 }; g.v += r._v; g.n++; m.set(k, g); } return [...m.values()].sort((a, b) => b.v - a.v); }
+  const fondoNom = (k) => { if (!CORE) return k; const r = CORE.rows.find((x) => x._fk === k); if (r) return r.proveedor_adjudicado; const s = CORE.sgr.rows.find((x) => sgrEk(x) === k); return s ? s.entidadejecutora : k; };
   function scope(opts = {}) {
     const D = CORE; const qn = clean(F.q);
     const base = D.rows.filter(inTerr);
     const atip = base.filter((r) => r._v >= ATIPICO);
     const pool = F.atip ? base : base.filter((r) => r._v < ATIPICO);
     const rows = pool.filter((r) => (opts.noEt || F.et === 'all' || r._t === F.et || (F.et === 'otra' && r._t === 'nac')) && (opts.noMc || F.mc === 'all' || (F.mc === 'sin' ? SIN.has(r._m) : r._m === F.mc)) && (opts.noFondo || !F.fondo || r._fk === F.fondo) && (!qn || clean(`${r.nombre_entidad} ${r.proveedor_adjudicado} ${r.objeto_del_contrato} ${r.id_contrato}`).includes(qn)));
-    const sgr = D.sgr.rows.filter(inTerr);
+    const sgr = D.sgr.rows.filter((r) => inTerr(r) && (opts.noFondo || !F.fondo || sgrEk(r) === F.fondo) && (!qn || clean(`${r.entidadejecutora} ${r.nombre} ${r.codigobpin} ${r.nomocad} ${r.sector}`).includes(qn)));
     const s1 = D.s1.rows.filter(inTerr);
     const label = F.muni ? `${munShow(F.muni)}${F.dept ? ', ' + deptName(F.dept) : ''}` : F.dept ? deptName(F.dept) : 'todo el país';
     return { D, rows, pool, atip, sgr, s1, label };
@@ -585,7 +616,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const P = getPeriod(F.pk); const parts = [P.l, F.muni ? `${munShow(F.muni)}${F.dept ? ', ' + deptName(F.dept) : ''}` : F.dept ? deptName(F.dept) : 'Todo el país'];
     if (F.et !== 'all') parts.push({ alc: 'Alcaldías y entidades municipales', gob: 'Gobernaciones y departamentales', otra: 'Otras entidades y nacionales' }[F.et]);
     if (F.mc !== 'all') parts.push(F.mc === 'sin' ? 'Sin competencia' : MODL[F.mc]);
-    if (F.fondo && CORE) { const r = CORE.rows.find((x) => x._fk === F.fondo); if (r) parts.push('Fondo: ' + r.proveedor_adjudicado); }
+    if (F.fondo && CORE) parts.push('Fondo: ' + fondoNom(F.fondo));
     if (F.q) parts.push(`Texto: «${F.q}»`);
     return parts.join(' · ');
   }
@@ -614,19 +645,26 @@ td.objeto { min-width: 260px; max-width: 460px; }
   const view = () => $('#view');
   let current = null; // ficha abierta
   function drawFilters() {
-    const muns = CORE ? [...new Set([...CORE.rows, ...CORE.sgr.rows].filter((r) => !F.dept || r._dep === F.dept).map((r) => r._mun).filter(Boolean))].sort((a, b) => munShow(a).localeCompare(munShow(b), 'es')) : [];
+    const withRel = new Set(CORE ? [...CORE.rows, ...CORE.sgr.rows].filter((r) => !F.dept || r._dep === F.dept).map((r) => r._mun).filter(Boolean) : []);
+    const allM = F.dept ? geoInit().mun.filter((f) => f.dc === F.dept).map((f) => f.cm) : ['BARRANQUILLA', 'MEDELLIN', 'CALI', 'BUCARAMANGA', 'CUCUTA', 'CARTAGENA', 'BOGOTA', 'SANTA MARTA', 'PEREIRA', 'MANIZALES', 'IBAGUE', 'VILLAVICENCIO', 'PASTO', 'MONTERIA', 'NEIVA', 'VALLEDUPAR', 'ARMENIA', 'POPAYAN', 'SINCELEJO', 'TUNJA', 'RIOHACHA', 'YOPAL', 'QUIBDO', 'FLORENCIA'];
+    const muns = CORE ? [...new Set([...withRel, ...allM, ...(F.muni ? [F.muni] : [])])].sort((a, b) => munShow(a).localeCompare(munShow(b), 'es')) : [];
     const fonds = CORE ? groupBy(CORE.rows.filter(inTerr), (r) => r._fk, (r) => ({ nom: r.proveedor_adjudicado })).slice(0, 80) : [];
+    const eo = CORE ? ejecOnly(CORE.sgr.rows.filter(inTerr)).slice(0, 80) : [];
+    const names = CORE ? [...new Set([...fonds.map((f) => titleCase(f.nom)), ...CORE.sgr.rows.filter((r) => r._et === 'fondo').map((r) => titleCase(r.entidadejecutora))])].slice(0, 400) : [];
     $('#filters').innerHTML = `
       <label><span>Periodo de firma</span><select id="f_pk">${periodOpts().map(([k, l]) => `<option value="${k}" ${F.pk === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
       <label><span>Departamento</span><select id="f_dept"><option value="">Todos</option>${DEPTS_SORTED.map((d) => `<option value="${d.code}" ${F.dept === d.code ? 'selected' : ''}>${esc(d.name)}</option>`).join('')}</select></label>
-      <label><span>Municipio</span><select id="f_muni"><option value="">Todos</option>${muns.map((m) => `<option value="${esc(m)}" ${F.muni === m ? 'selected' : ''}>${esc(munShow(m))}</option>`).join('')}</select></label>
+      <label><span>Municipio</span><select id="f_muni"><option value="">Todos</option>${muns.map((m) => `<option value="${esc(m)}" ${F.muni === m ? 'selected' : ''}>${esc(munShow(m))}${withRel.has(m) ? '' : ' · sin fondos mixtos'}</option>`).join('')}</select></label>
       <label><span>Tipo de entidad</span><select id="f_et">${[['all', 'Todas'], ['alc', 'Alcaldías y municipales'], ['gob', 'Gobernaciones y departamentales'], ['otra', 'Otras y nacionales']].map(([k, l]) => `<option value="${k}" ${F.et === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label><span>Modalidad</span><select id="f_mc">${[['all', 'Todas'], ['sin', 'Sin competencia'], ['dir', 'Solo directa'], ['int', 'Solo «interadministrativo»'], ['esp', 'Solo régimen especial'], ['comp', 'Con competencia']].map(([k, l]) => `<option value="${k}" ${F.mc === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-      <label><span>Fondo</span><select id="f_fondo"><option value="">Todos</option>${fonds.map((f) => `<option value="${esc(f.key)}" ${F.fondo === f.key ? 'selected' : ''}>${esc(titleCase(f.nom).slice(0, 60))}</option>`).join('')}</select></label>
-      <label><span>Buscar</span><input id="f_q" type="search" value="${esc(F.q)}" placeholder="Entidad, fondo, objeto…"></label>`;
+      <label><span>Fondo</span><select id="f_fondo"><option value="">Todos</option>${fonds.map((f) => `<option value="${esc(f.key)}" ${F.fondo === f.key ? 'selected' : ''}>${esc(titleCase(f.nom).slice(0, 60))}</option>`).join('')}${eo.length ? `<optgroup label="Solo ejecutan regalías (sin contratos en SECOP II)">${eo.map((f) => `<option value="${esc(f.key)}" ${F.fondo === f.key ? 'selected' : ''}>${esc(titleCase(f.nom).slice(0, 60))}</option>`).join('')}</optgroup>` : ''}</select></label>
+      <label class="fq"><span>Buscar fondo, entidad, proyecto u objeto</span><span class="fqrow"><input id="f_q" type="search" list="f_qlist" value="${esc(F.q)}" placeholder="Escriba y pulse Buscar…" autocomplete="off"><button type="button" class="btn primary sm" id="f_qgo">Buscar</button>${F.q ? '<button type="button" class="btn sm" id="f_qx">Limpiar</button>' : ''}</span><datalist id="f_qlist">${names.map((n) => `<option value="${esc(n)}"></option>`).join('')}</datalist></label>`;
     const set = (id, k, reload) => { const el = $(id); el.onchange = () => { F[k] = el.value; if (k === 'dept') F.muni = ''; if (reload) CORE = null; route(); }; };
     set('#f_pk', 'pk', true); set('#f_dept', 'dept'); set('#f_muni', 'muni'); set('#f_et', 'et'); set('#f_mc', 'mc'); set('#f_fondo', 'fondo');
-    let t; $('#f_q').oninput = (e) => { clearTimeout(t); t = setTimeout(() => { F.q = e.target.value.trim(); route(true); }, 350); };
+    const go = () => { F.q = $('#f_q').value.trim(); drawFilters(); route(true); };
+    $('#f_qgo').onclick = go; $('#f_q').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } };
+    $('#f_q').onchange = go; $('#f_q').onsearch = go;
+    const qx = $('#f_qx'); if (qx) qx.onclick = () => { F.q = ''; drawFilters(); route(true); };
   }
   function drawTabs(h) { $('#tabs').innerHTML = TABS.map(([k, l]) => `<a href="#${k}" ${h === k ? 'aria-current="page"' : ''}>${l}</a>`).join(''); }
   function drawStatus() {
@@ -699,7 +737,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
         <div class="kpi"><span class="l">Fondos con contratos</span><span class="v">${fmtN(fondos.length)}</span><span class="s">${fmtN(new Set(R.map((r) => r._mun).filter(Boolean)).size)} municipios</span></div>
         <div class="kpi"><span class="l">Regalías ejecutadas por fondos${tip('ejecutor')}</span><span class="v">${fmtCOP(sum(sg, '_v'))}</span><span class="s">${fmtN(sg.length)} proyectos · DNP</span></div>
       </div>
-      ${!R.length ? (sg.length ? `<div class="notice info"><b>Sin contratos en SECOP II, pero con regalías ejecutadas por fondos mixtos${tip('ejecutor')}</b><span>Ninguna entidad con sede en ${esc(sc.label)} registra contratos con fondos mixtos en SECOP II para esta selección. Aun así, el DNP registra ${fmtN(sg.length)} proyecto(s) de regalías de este territorio, por ${fmtCOP(sum(sg, '_v'))}, con un fondo mixto como entidad ejecutora. En esa figura el fondo no aparece como contratista de la entidad territorial, sino como ejecutor del proyecto: recibe los recursos de regalías y contrata por su cuenta, por derecho privado. Los proyectos están abajo; lo que el fondo contrató se ve en su ficha, pestaña «Convocatorias y contratación propia», solo si lo publicó en SECOP II.</span></div>` : '<div class="card"><p class="muted">No hay contratos con fondos mixtos ni proyectos de regalías ejecutados por fondos para esta selección. Amplíe el periodo, quite filtros o revise otro territorio.</p></div>') : `
+      ${!R.length ? (sg.length ? `<div class="notice info"><b>Sin contratos en SECOP II, pero con regalías ejecutadas por fondos mixtos${tip('ejecutor')}</b><span>Ninguna entidad con sede en ${esc(sc.label)} registra contratos con fondos mixtos en SECOP II para esta selección. Aun así, el DNP registra ${fmtN(sg.length)} proyecto(s) de regalías de este territorio, por ${fmtCOP(sum(sg, '_v'))}, con un fondo mixto como entidad ejecutora. En esa figura el fondo no aparece como contratista de la entidad territorial, sino como ejecutor del proyecto: recibe los recursos de regalías y contrata por su cuenta, por derecho privado. Los proyectos están abajo; lo que el fondo contrató se ve en su ficha, pestaña «Convocatorias y contratación propia», solo si lo publicó en SECOP II.</span></div>` : `<div class="notice info"><b>${esc(sc.label)}: sin relación registrada con fondos mixtos</b><span>Para esta selección no hay contratos con fondos mixtos en SECOP II ni proyectos de regalías con un fondo mixto como ejecutor. Es un resultado, no un error: las entidades de este territorio contratan sus regalías por otras vías. ${F.q ? 'Revise también que el texto buscado esté bien escrito o pruebe con una sola palabra del nombre. ' : ''}Puede ampliar el periodo o ver cómo se contratan aquí las regalías de todo origen.</span>${F.dept ? '<button class="btn sm" id="pan_goreg" style="width:fit-content">Ver las regalías de este territorio →</button>' : ''}</div>`) : `
       <div class="card"><h3>Lo que muestran los datos</h3><ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">${ins.map((t) => `<li>${t}</li>`).join('')}</ul></div>
       <div class="grid2">
         <div class="card"><h3>Por año y modalidad</h3>${modLegend()}<div class="bars">${years.map((y) => barRow(String(y.y), modParts(y.by), maxY, `${fmtCOP(y.v)} · ${fmtN(y.n)}`)).join('')}</div></div>
@@ -714,6 +752,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
       ${qlink(sc.D.a)}</div>`;
     if (R.length) flowChart($('#flow'), R);
     if ($('#pansgr')) sgrTable($('#pansgr'), sc.sgr, {});
+    const pg = $('#pan_goreg'); if (pg) pg.onclick = () => { RG.dept = F.dept; RG.muni = F.muni; RG.D = null; navTo('regalias'); };
     bindAtip();
   }
 
@@ -863,7 +902,9 @@ td.objeto { min-width: 260px; max-width: 460px; }
   }
 
   // ---------------------------------------------------------------- Tabla de proyectos de regalías
-  const famBadges = (r) => (r._f || []).slice(0, 4).map((x) => `<span class="sub"><span class="badge ${sgrFamily(x.nombrefondo) === 'Asignaciones directas' ? 'media' : 'live'}">${esc(sgrFamily(x.nombrefondo))}</span> aporta ${esc(titleCase(x.nombreentidad || '—'))}: ${fmtCOP(x.recursosaprobadosasignadosspgr)} aprobados, ${fmtCOP(x.apropiacionpagada)} pagados</span>`).join('');
+  const finBadges = (r) => (r._fd || []).slice(0, 4).map((o) => `<span class="sub"><span class="badge ${o.fam === 'Asignaciones directas' ? 'media' : 'live'}">${esc(o.fam)}</span> ${esc(o.tipo)} · aporta ${esc(titleCase(o.ent || '—'))} · ${fmtPct(o.share)} del proyecto (≈ ${fmtCOP(o.share * r._v)})${o.bis.length ? ' · bienio ' + esc(o.bis.join(', ')) : ''}</span>`).join('');
+  const hacLine = (r) => ((r._f || []).length ? `<span class="sub">Hacienda 2025–2026: ${fmtCOP(sum(r._f, 'recursosaprobadosasignadosspgr'))} aprobados, ${fmtCOP(sum(r._f, 'apropiacionpagada'))} pagados</span>` : '');
+  const famBadgesH = (r) => (r._f || []).slice(0, 4).map((x) => `<span class="sub"><span class="badge ${sgrFamily(x.nombrefondo) === 'Asignaciones directas' ? 'media' : 'live'}">${esc(sgrFamily(x.nombrefondo))}</span> aporta ${esc(titleCase(x.nombreentidad || '—'))}: ${fmtCOP(x.recursosaprobadosasignadosspgr)} aprobados, ${fmtCOP(x.apropiacionpagada)} pagados</span>`).join('');
   // Clave de ficha para un ejecutor del DNP: NIT si es un fondo de la lista verificada o si su nombre coincide con un contratista de SECOP
   function ejecKey(e) {
     const n = normTxt(e); const seed = SEEDS.find((s) => s[2].some((a) => n.includes(a))); if (seed) return seed[0];
@@ -871,20 +912,22 @@ td.objeto { min-width: 260px; max-width: 460px; }
     return clean(e);
   }
   function sgrTable(box, rowsAll, opts = {}) {
-    const st = opts.st || (box._st = box._st || { est: 'valid', fam: 'all', ej: 'all' });
+    const st = opts.st || (box._st = box._st || { est: 'valid', fam: 'all', ej: 'all', bi: 'all' }); if (!st.bi) st.bi = 'all';
     const draw = () => {
       const byEst = rowsAll.filter((r) => (st.est === 'all' ? true : st.est === 'des' ? !r._ok : r._ok));
       const famCount = {}; let sinDato = 0; for (const r of byEst) { if (!r._fam.length) sinDato++; for (const f of r._fam) famCount[f] = (famCount[f] || 0) + 1; }
       const ejCount = {}; for (const r of byEst) ejCount[r._et] = (ejCount[r._et] || 0) + 1;
-      const rows = byEst.filter((r) => (st.fam === 'all' || (st.fam === 'sin' ? !r._fam.length : r._fam.includes(st.fam))) && (st.ej === 'all' || r._et === st.ej));
+      const rows = byEst.filter((r) => (st.fam === 'all' || (st.fam === 'sin' ? !r._fam.length : r._fam.includes(st.fam))) && (st.ej === 'all' || r._et === st.ej) && (st.bi === 'all' || (st.bi === 'sin' ? !(r._bi || []).length : (r._bi || []).includes(st.bi))));
+      const biCount = {}; let biSin = 0; for (const r of byEst) { if (!(r._bi || []).length) biSin++; for (const b of r._bi || []) biCount[b] = (biCount[b] || 0) + 1; }
       box.innerHTML = `<div class="stack" style="gap:8px">
         <div class="chips">${[['valid', 'Aprobados y en curso'], ['des', 'Desaprobados'], ['all', 'Todos']].map(([k, l]) => `<button class="btn sm ${st.est === k ? 'primary' : ''}" data-se="${k}">${l}</button>`).join('')}</div>
         <div class="field"><span>Fuente de las regalías${tip('fuente')}</span><div class="chips">${[['all', `Todas · ${fmtN(byEst.length)}`], ...SGR_FAMS.filter((f) => famCount[f]).map((f) => [f, `${f} · ${fmtN(famCount[f])}`]), ...(sinDato ? [['sin', `Sin dato de fuente · ${fmtN(sinDato)}`]] : [])].map(([k, l]) => `<span style="display:inline-flex;align-items:center"><button class="btn sm ${st.fam === k ? 'primary' : ''}" data-sf="${esc(k)}">${esc(l)}</button>${SGR_FAMS.includes(k) ? tip(k) : ''}</span>`).join('')}</div></div>
         ${opts.ejFilter ? `<div class="field"><span>Quién ejecuta${tip('ejecutor')}</span><div class="chips">${[['all', 'Todos'], ...Object.keys(EJ_T).filter((k) => ejCount[k]).map((k) => [k, `${EJ_T[k]} · ${fmtN(ejCount[k])}`])].map(([k, l]) => `<button class="btn sm ${st.ej === k ? 'primary' : ''}" data-sj="${k}">${esc(l)}</button>`).join('')}</div></div>` : ''}
+        <div class="field"><span>Bienio de los recursos</span><div class="chips">${[['all', 'Todos'], ...BIENIOS.filter((b) => biCount[b]).map((b) => [b, `${b} · ${fmtN(biCount[b])}`]), ...(biSin ? [['sin', `Sin dato · ${fmtN(biSin)}`]] : [])].map(([k, l]) => `<button class="btn sm ${st.bi === k ? 'primary' : ''}" data-sb="${esc(k)}">${esc(l)}</button>`).join('')}</div></div>
         <div class="tb"></div>
-        <p class="muted" style="font-size:.78rem">Fuente: DNP (proyecto, ejecutor, OCAD, estado y avances) y Hacienda (fuente, entidad que aporta y pagos; solo bienio 2025–2026, por eso algunos proyectos quedan «sin dato de fuente»). El DNP no publica fechas, así que estos proyectos no se filtran por periodo.</p></div>`;
+        <p class="muted" style="font-size:.78rem">Fuente: DNP (proyecto, ejecutor, OCAD, estado, avances y tipo de regalía que financia cada proyecto en todas las vigencias, incluidos los bienios 2021–2022, 2023–2024 y 2025–2026) y Hacienda (aprobado y pagado del bienio 2025–2026, el único que publica). El valor por fuente es la participación de cada fuente aplicada al valor total del proyecto.</p></div>`;
       dataTable(box.querySelector('.tb'), rows, [
-        { k: 'n', l: 'Proyecto', cls: 'objeto', val: (r) => r.nombre || '', html: (r) => `${esc(String(r.nombre || '').slice(0, 190))}<span class="sub mono">BPIN${tip('bpin')} ${esc(r.codigobpin)}${r.sector ? ' · ' + esc(titleCase(r.sector)) : ''}</span>${opts.single ? '' : `<span class="sub">Ejecuta: ${r._et === 'fondo' ? `<span class="badge alta">fondo mixto</span> <button class="linkbtn" data-fondo="${esc(ejecKey(r.entidadejecutora))}" data-name="${esc(r.entidadejecutora)}">${esc(titleCase(r.entidadejecutora))}</button>` : esc(titleCase(r.entidadejecutora))}${r.interventor ? ' · Interventor: ' + esc(titleCase(r.interventor)) : ''}</span>`}${famBadges(r)}` },
+        { k: 'n', l: 'Proyecto', cls: 'objeto', val: (r) => r.nombre || '', html: (r) => `${esc(String(r.nombre || '').slice(0, 190))}<span class="sub mono">BPIN${tip('bpin')} ${esc(r.codigobpin)}${r.sector ? ' · ' + esc(titleCase(r.sector)) : ''}</span>${opts.single ? '' : `<span class="sub">Ejecuta: ${r._et === 'fondo' ? `<span class="badge alta">fondo mixto</span> <button class="linkbtn" data-fondo="${esc(ejecKey(r.entidadejecutora))}" data-name="${esc(r.entidadejecutora)}">${esc(titleCase(r.entidadejecutora))}</button>` : esc(titleCase(r.entidadejecutora))}${r.interventor ? ' · Interventor: ' + esc(titleCase(r.interventor)) : ''}</span>`}${(r._fd || []).length ? finBadges(r) + hacLine(r) : famBadgesH(r)}` },
         { k: 'o', l: 'Territorio', tip: 'ocad', sort: true, val: (r) => r.nomocad || '', html: (r) => esc(titleCase(r.nomocad || '—')) },
         { k: 'e', l: 'Estado', sort: true, val: (r) => r.estado || '', html: (r) => esc(titleCase(r.estado || '—')) },
         { k: 'v', l: 'Valor total', r: true, sort: true, val: (r) => r._v, html: (r) => `<span title="${fullCOP(r._v)}">${fmtCOP(r._v)}</span>` },
@@ -892,6 +935,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
       ], { sort: 'v', size: 20, empty: 'No hay proyectos de regalías para esta selección.' });
       box.querySelectorAll('[data-se]').forEach((b) => { b.onclick = () => { st.est = b.dataset.se; draw(); }; });
       box.querySelectorAll('[data-sf]').forEach((b) => { b.onclick = () => { st.fam = b.dataset.sf; draw(); }; });
+      box.querySelectorAll('[data-sb]').forEach((b) => { b.onclick = () => { st.bi = b.dataset.sb; draw(); }; });
       box.querySelectorAll('[data-sj]').forEach((b) => { b.onclick = () => { st.ej = b.dataset.sj; draw(); }; });
     };
     draw();
@@ -1079,7 +1123,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const D = (window.__CO_DEPTS__ && window.__CO_DEPTS__.features) || []; const M = (window.__CO_MUNIS__ && window.__CO_MUNIS__.features) || [];
     const c3 = {};
     GEO.dep = D.map((f) => { const d = deptOf(f.n); c3[f.c] = d ? d.code : ''; return { g: f.g, p: f.p, n: d ? d.name : f.n, k: d ? d.code : f.c, lab: f.c }; });
-    GEO.mun = M.map((f) => { const dc = c3[f.d] || ''; const cm = canonMun(f.n); return { g: f.g, p: f.p, n: f.n, dc, cm, k: dc + '|' + cm }; });
+    GEO.mun = M.map((f0) => { const f = { ...f0, n: /Portuario De Barr/i.test(f0.n) ? 'Barranquilla' : f0.n.replace(/\s*\(.*?\)\s*/g, '').replace(/, D\.c\./i, ' D.C.').trim() }; const dc = c3[f.d] || ''; const cm = canonMun(f.n); return { g: f.g, p: f.p, n: f.n, dc, cm, k: dc + '|' + cm }; });
     for (const f of GEO.mun) { (GEO.idx[f.dc] = GEO.idx[f.dc] || new Map()).set(f.cm, f.k); if (!MUN_NAMES.has(f.cm) || !/[^\x00-\x7F]/.test(MUN_NAMES.get(f.cm))) MUN_NAMES.set(f.cm, f.n); }
     return GEO;
   }
@@ -1191,9 +1235,11 @@ td.objeto { min-width: 260px; max-width: 460px; }
       part('sgr', { select: SGR_SEL, where: `upper(departamento) like '%${d.key}%' OR upper(nomocad) like '%${d.key}%'`, limit: 30000 }),
       part('contratos', { select: FS, where: `sistema_general_de_regal_as > 0 AND ${W} AND upper(departamento) like '%${d.key}%'`, limit: 30000 }),
     ]);
+    const fin = await part('sgrfin', { select: FIN_SEL, where: `fuentedefinanciaci_n like 'SGR%' AND (bpin like '____${code}%' OR codigoentidadfuentefinanciacion like '${code}%')`, limit: 50000 });
     const byB = new Map(); for (const r of ej.rows) { const a = byB.get(r.codigobpin) || []; a.push(r); byB.set(r.codigobpin, a); }
     const seenB = new Set(); const proj = [];
     for (const r of dnp.rows) { r._f = byB.get(r.codigobpin) || []; r._fam = [...new Set(r._f.map((x) => sgrFamily(x.nombrefondo)))]; decorateSgr(r); if (r._dep !== code || seenB.has(r.codigobpin)) continue; seenB.add(r.codigobpin); proj.push(r); }
+    applyFin(dnp.rows, fin.rows);
     const contr = sec.rows.map((r) => decorate({ ...r })).filter((r) => r._dep === code); contr.forEach((r) => { r._isF = isFondo(r.proveedor_adjudicado, r.documento_proveedor); r._al = []; });
     pre.rows.forEach((r) => { r._fam = sgrFamily(r.nombrefondo); r._mun = hMuni(r); }); ej.rows.forEach((r) => { r._fam = sgrFamily(r.nombrefondo); r._mun = hMuni(r); });
     return { pre, ej, dnp, sec, proj, contr, P, code };
@@ -1299,7 +1345,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
       Objeto: r.objeto_del_contrato, 'Tipo de contrato': r.tipo_de_contrato, Modalidad: r.modalidad_de_contratacion, 'Justificación': r.justificacion_modalidad_de, 'Clasificación': MODL[r._m], 'Sin competencia': SIN.has(r._m) ? 'Sí' : 'No',
       'Valor del contrato': r._v, 'Regalías (SGR)': r._sgr, 'Valor pagado': num(r.valor_pagado), 'Días adicionados': num(r.dias_adicionados), Estado: r.estado_contrato, 'Ordenador del gasto': r.nombre_ordenador_del_gasto, Supervisor: r.nombre_supervisor, 'Representante legal del contratista': r.nombre_representante_legal, Alertas: alTxt(r), 'Enlace SECOP': urlOf(r.urlproceso) };
   }
-  const sgrRow = (r) => ({ Departamento: deptName(r._dep), 'Municipio / territorio': munShow(r._mun), OCAD: r.nomocad, BPIN: r.codigobpin, Proyecto: r.nombre, Sector: r.sector, 'Entidad ejecutora': r.entidadejecutora, 'Tipo de ejecutor': EJ_T[r._et], Estado: r.estado, 'Valor total': r._v, 'Avance físico %': r.ejecucionfisica != null ? num(r.ejecucionfisica) : '', 'Avance financiero %': r.ejecucionfinanciera != null ? num(r.ejecucionfinanciera) : '', 'Pagos adelante de la obra': r._gap >= 30 ? 'Sí' : '', 'Fuentes (Hacienda 2025–2026)': [...new Set((r._f || []).map((x) => x.nombrefondo))].join(' | '), 'Tipo de fuente': (r._fam || []).join(' | '), 'Entidad que aporta': [...new Set((r._f || []).map((x) => x.nombreentidad))].join(' | '), 'Aprobado bienio': sum(r._f || [], 'recursosaprobadosasignadosspgr'), 'Pagado bienio': sum(r._f || [], 'apropiacionpagada'), Interventor: r.interventor || '' });
+  const sgrRow = (r) => ({ Departamento: deptName(r._dep), 'Municipio / territorio': munShow(r._mun), OCAD: r.nomocad, BPIN: r.codigobpin, Proyecto: r.nombre, Sector: r.sector, 'Entidad ejecutora': r.entidadejecutora, 'Tipo de ejecutor': EJ_T[r._et], Estado: r.estado, 'Valor total': r._v, 'Avance físico %': r.ejecucionfisica != null ? num(r.ejecucionfisica) : '', 'Avance financiero %': r.ejecucionfinanciera != null ? num(r.ejecucionfinanciera) : '', 'Pagos adelante de la obra': r._gap >= 30 ? 'Sí' : '', 'Fuentes (Hacienda 2025–2026)': [...new Set((r._f || []).map((x) => x.nombrefondo))].join(' | '), 'Tipo de fuente': (r._fam || []).join(' | '), 'Fuentes (DNP, todas las vigencias)': (r._fd || []).map((o) => `${o.tipo} (${Math.round(o.share * 100)} %; ${o.ent})`).join(' | '), 'Bienios con recursos': (r._bi || []).join(' | '), 'Entidad que aporta': [...new Set((r._f || []).map((x) => x.nombreentidad))].join(' | '), 'Aprobado bienio': sum(r._f || [], 'recursosaprobadosasignadosspgr'), 'Pagado bienio': sum(r._f || [], 'apropiacionpagada'), Interventor: r.interventor || '' });
   function exportTables() {
     const h = (location.hash || '#panorama').slice(1);
     if (h === 'regalias') {
