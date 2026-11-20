@@ -441,7 +441,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
   // ---------------------------------------------------------------- Clasificaciones
   const MODC = [['dir', 'Contratación directa', 'c-dir'], ['int', 'Directa como «convenio interadministrativo»', 'c-int'], ['esp', 'Régimen especial', 'c-esp'], ['comp', 'Con competencia', 'c-comp']];
   const MODL = Object.fromEntries(MODC.map(([k, l]) => [k, l]));
-  function modClass(m, j) { const a = normTxt(m || ''), b = normTxt(j || ''); if (/REGIMEN ESPECIAL/.test(a)) return 'esp'; if (/DIRECTA/.test(a)) return /INTERADMINISTRATIV/.test(b) ? 'int' : 'dir'; return 'comp'; }
+  function modClass(m, j) { const a = normTxt(m || ''), b = normTxt(j || ''); if (/REGIMEN ESPECIAL/.test(a)) return 'esp'; if (/DIRECTA|CONVENIOS CON MAS DE DOS PARTES/.test(a)) return /INTERADMINISTRATIV/.test(b) ? 'int' : 'dir'; return 'comp'; }
   const SIN = new Set(['dir', 'int', 'esp']);
   function entType(nom, orden) {
     const n = normTxt(nom);
@@ -531,9 +531,25 @@ td.objeto { min-width: 260px; max-width: 460px; }
   // ---------------------------------------------------------------- Carga principal
   const FS = 'id_contrato,referencia_del_contrato,nombre_entidad,nit_entidad,departamento,ciudad,orden,proveedor_adjudicado,documento_proveedor,objeto_del_contrato,tipo_de_contrato,modalidad_de_contratacion,justificacion_modalidad_de,estado_contrato,fecha_de_firma,fecha_de_inicio_del_contrato,fecha_de_fin_del_contrato,valor_del_contrato,valor_pagado,dias_adicionados,sistema_general_de_regal_as,urlproceso,nombre_representante_legal,nombre_ordenador_del_gasto,nombre_supervisor';
   const SGR_SEL = 'codigobpin,nombre,estado,valortotal,sector,entidadejecutora,departamento,ejecucionfisica,ejecucionfinanciera,nomocad,interventor';
+  // Algunas entidades registran la ciudad como «No Definido»: se deduce del nombre (p. ej. «ALCALDIA DISTRITAL BARRANCABERMEJA»)
+  const _mfn = new Map();
+  function munFromName(dep, nom) {
+    if (!dep || !nom) return ''; const k = dep + '|' + nom; if (_mfn.has(k)) return _mfn.get(k);
+    const idx = geoInit().idx[dep]; let best = '';
+    if (idx) { const t = ' ' + clean(nom) + ' '; for (const cm of idx.keys()) if (cm.length > best.length && cm.length >= 4 && t.includes(' ' + cm + ' ')) best = cm; }
+    _mfn.set(k, best); return best;
+  }
+  // Fila de SECOP I (conjunto SECOP Integrado) llevada a la forma de SECOP II
+  function fromS1(x) {
+    return { _src: 'SECOP I', id_contrato: 'SECOP I · ' + (x.numero_del_contrato || ''), nombre_entidad: String(x.nombre_de_la_entidad || '').replace(/^[^-]{3,40} - /, ''), nit_entidad: String(x.nit_de_la_entidad || '').replace(/-\d$/, ''), departamento: x.departamento_entidad, ciudad: x.municipio_entidad,
+      orden: x.nivel_entidad, proveedor_adjudicado: x.nom_raz_social_contratista, documento_proveedor: x.documento_proveedor, objeto_del_contrato: x.objeto_a_contratar || x.objeto_del_proceso, tipo_de_contrato: x.tipo_de_contrato,
+      modalidad_de_contratacion: x.modalidad_de_contrataci_n, justificacion_modalidad_de: /INTERADMINISTRATIV/i.test(x.objeto_a_contratar || '') ? 'Convenio interadministrativo (según el objeto)' : '', estado_contrato: x.estado_del_proceso, fecha_de_firma: x.fecha_de_firma_del_contrato,
+      fecha_de_inicio_del_contrato: x.fecha_inicio_ejecuci_n, fecha_de_fin_del_contrato: x.fecha_fin_ejecuci_n, valor_del_contrato: x.valor_contrato, urlproceso: x.url_contrato };
+  }
+  const S1_SEL = 'nivel_entidad,nombre_de_la_entidad,nit_de_la_entidad,departamento_entidad,municipio_entidad,nom_raz_social_contratista,documento_proveedor,objeto_a_contratar,tipo_de_contrato,modalidad_de_contrataci_n,estado_del_proceso,fecha_de_firma_del_contrato,fecha_inicio_ejecuci_n,fecha_fin_ejecuci_n,numero_del_contrato,valor_contrato,url_contrato';
   function decorate(r) {
     r._m = modClass(r.modalidad_de_contratacion, r.justificacion_modalidad_de); r._t = entType(r.nombre_entidad, r.orden); r._v = num(r.valor_del_contrato); r._sgr = num(r.sistema_general_de_regal_as);
-    const d = deptOf(r.departamento); r._dep = d ? d.code : ''; r._mun = munName(r.ciudad);
+    const d = deptOf(r.departamento); r._dep = d ? d.code : ''; r._mun = munName(r.ciudad) || munFromName(r._dep, r.nombre_entidad);
     r._fk = fondoKey(r); r._y = yr(r.fecha_de_firma); return r;
   }
   async function attachFuentes(rows) {
@@ -574,13 +590,14 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const [a, b, s1, sgr] = await Promise.all([
       part('contratos', { select: FS, q: 'fondo mixto', where: `${W} AND upper(proveedor_adjudicado) like '%MIXTO%'`, limit: 30000 }),
       part('contratos', { select: FS, where: `${W} AND documento_proveedor in (${nits.map(sqlStr).join(',')})`, limit: 30000 }),
-      part('integrado', { select: 'nom_raz_social_contratista as nom,documento_proveedor as doc,nombre_de_la_entidad as ent,nit_de_la_entidad as nit,municipio_entidad as mun,departamento_entidad as dep,modalidad_de_contrataci_n as mod,count(*) as n,sum(valor_contrato) as v', q: 'fondo mixto', where: `origen='SECOPI' AND upper(nom_raz_social_contratista) like '%MIXTO%'`, group: 'nom_raz_social_contratista,documento_proveedor,nombre_de_la_entidad,nit_de_la_entidad,municipio_entidad,departamento_entidad,modalidad_de_contrataci_n', limit: 30000 }),
+      part('integrado', { select: S1_SEL, q: 'fondo mixto', where: `origen='SECOPI' AND upper(nom_raz_social_contratista) like '%MIXTO%' AND ${periodWhere('fecha_de_firma_del_contrato', P)}`, limit: 30000 }),
       part('sgr', { select: SGR_SEL, where: sgrW, limit: 30000 }),
     ]);
     const seen = new Set(); const rows = [];
     for (const r of [...a.rows, ...b.rows]) { if (!r.id_contrato || seen.has(r.id_contrato) || !isFondo(r.proveedor_adjudicado, r.documento_proveedor)) continue; seen.add(r.id_contrato); rows.push(decorate({ ...r })); }
+    let n1 = 0; for (const x of s1.rows) { if (!isFondo(x.nom_raz_social_contratista, x.documento_proveedor)) continue; const r = fromS1(x); const k = r.id_contrato + '|' + clean(r.proveedor_adjudicado) + '|' + r.valor_del_contrato; if (seen.has(k)) continue; seen.add(k); rows.push(decorate(r)); n1++; }
     computeAlerts(rows);
-    s1.rows = s1.rows.filter((r) => isFondo(r.nom, r.doc)).map((r) => ({ ...r, _dep: (deptOf(r.dep) || {}).code || '', _mun: munName(r.mun || ''), _fk: nitBase(r.doc) || clean(r.nom), _v: num(r.v), _n: num(r.n), _m: modClass(r.mod, '') }));
+    s1.n = n1; s1.rows = [];
     const fu = sgr.ok && sgr.rows.length ? await attachFuentes(sgr.rows) : { ok: true, failed: 0, n: 0 };
     sgr.rows.forEach(decorateSgr);
     return { a, b, s1, sgr, fu, rows, P, at: new Date() };
@@ -676,7 +693,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
   function drawStatus() {
     const D = CORE; if (!D) return;
     const srcs = [['SECOP II', D.a.ok && D.b.ok], ['SECOP I', D.s1.ok], ['DNP regalías', D.sgr.ok], ['Hacienda (fuentes)', D.fu.ok]];
-    $('#status').innerHTML = srcs.map(([l, ok]) => `<span><span class="dot ${ok ? 'live' : 'err'}"></span>${l} · ${ok ? 'en vivo' : 'no respondió'}</span>`).join('') + `<span>Consultado ${D.at.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })} · ${fmtN(D.rows.length)} contratos con fondos · ${fmtN(D.sgr.rows.length)} proyectos de regalías</span>`;
+    $('#status').innerHTML = srcs.map(([l, ok]) => `<span><span class="dot ${ok ? 'live' : 'err'}"></span>${l} · ${ok ? 'en vivo' : 'no respondió'}</span>`).join('') + `<span>Consultado ${D.at.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })} · ${fmtN(D.rows.length)} contratos con fondos (${fmtN(D.s1.n || 0)} de SECOP I) · ${fmtN(D.sgr.rows.length)} proyectos de regalías</span>`;
   }
   const navTo = (h) => { if (location.hash !== '#' + h) location.hash = h; else route(); };
   async function route(keepFocus) {
@@ -1003,13 +1020,14 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const jobs = {
       recv: hasDoc ? part('contratos', { select: FS, where: `documento_proveedor in (${vs})`, order: 'fecha_de_firma DESC', limit: 10000 }) : none('contratos'),
       s1: hasDoc ? part('integrado', { select: 'nombre_de_la_entidad,municipio_entidad,departamento_entidad,numero_del_contrato,objeto_a_contratar,modalidad_de_contrataci_n,valor_contrato,fecha_de_firma_del_contrato,url_contrato', where: `origen='SECOPI' AND documento_proveedor in (${vs})`, order: 'fecha_de_firma_del_contrato DESC', limit: 5000 }) : none('integrado'),
+      own1: hasDoc ? part('integrado', { select: S1_SEL, where: `origen='SECOPI' AND nit_de_la_entidad like '${nitBase(ctx.key)}%'`, order: 'fecha_de_firma_del_contrato DESC', limit: 5000 }) : none('integrado'),
       own: hasDoc ? part('contratos', { select: FS, where: `nit_entidad in (${vs})`, order: 'fecha_de_firma DESC', limit: 5000 }) : none('contratos'),
       proc: hasDoc ? part('procesos', { select: 'id_del_proceso,referencia_del_proceso,nombre_del_procedimiento,modalidad_de_contratacion,precio_base,fecha_de_publicacion_del,estado_del_procedimiento,respuestas_al_procedimiento,adjudicado,nombre_del_proveedor,valor_total_adjudicacion,urlproceso', where: `nit_entidad in (${vs})`, order: 'fecha_de_publicacion_del DESC', limit: 2000 }) : none('procesos'),
     };
     const keys = Object.keys(jobs); const vals = await Promise.all(Object.values(jobs)); const P = Object.fromEntries(keys.map((k, i) => [k, vals[i]]));
     const recv = hasDoc ? P.recv.rows.map((r) => decorate({ ...r })) : CORE.rows.filter((r) => r._fk === ctx.key).map((r) => ({ ...r }));
     computeAlerts(recv);
-    const own = P.own.rows.map((r) => decorate({ ...r }));
+    const own = [...P.own.rows.map((r) => decorate({ ...r })), ...P.own1.rows.filter((x) => x.fecha_de_firma_del_contrato).map((x) => decorate(fromS1(x)))];
     const sgr = CORE.sgr.rows.filter((r) => ejecs.includes(r.entidadejecutora));
     return { P, recv, own, sgr, ejecs, hasDoc };
   }
@@ -1022,7 +1040,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const reps = [...new Set(R.map((r) => String(r.nombre_representante_legal || '').trim()).filter((x) => x && !/no definido|sin descrip/i.test(x)))];
     const nal = R.filter((r) => r._al.length).length;
     const tabs = [['resumen', 'Resumen'], ['territorio', 'Quién le contrata'], ['contratos', `Contratos (${fmtN(R.length)})`], ['regalias', `Regalías (${fmtN(D.sgr.length)})`], ['propia', `Convocatorias y contratación propia (${fmtN(D.P.proc.rows.length + D.own.length)})`], ['docs', 'Informes y documentos'], ['alertas', `Alertas (${fmtN(nal)})`]];
-    $('#fb').innerHTML = `<div class="row" style="justify-content:space-between"><div class="row">${D.P.proc.rows.length || D.own.length ? '<span class="badge live">Publica contratación propia en SECOP II</span>' : ''}${D.ejecs.length ? '<span class="badge media">Ejecutor de regalías</span>' : ''}${!D.hasDoc ? '<span class="badge nd">Sin NIT: solo contratos del periodo cargado</span>' : ''}</div><button class="btn lime" data-dl>⬇ Descargar esta ficha</button></div>
+    $('#fb').innerHTML = `<div class="row" style="justify-content:space-between"><div class="row">${D.P.proc.rows.length || D.own.length ? '<span class="badge live">Publica contratación propia en SECOP</span>' : ''}${D.ejecs.length ? '<span class="badge media">Ejecutor de regalías</span>' : ''}${!D.hasDoc ? '<span class="badge nd">Sin NIT: solo contratos del periodo cargado</span>' : ''}</div><button class="btn lime" data-dl>⬇ Descargar esta ficha</button></div>
       <div class="subtabs" role="tablist" id="ftabs">${tabs.map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${ctx.tab === k}">${l}</button>`).join('')}</div><div id="ftb" class="stack"></div>`;
     $('#ftabs').onclick = (e) => { const b = e.target.closest('[data-tab]'); if (!b) return; ctx.tab = b.dataset.tab; $$('#ftabs button').forEach((x) => x.setAttribute('aria-selected', x === b)); draw(); };
     const draw = async () => {
@@ -1065,7 +1083,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
         if (D.ejecs.length) sgrTable($('#fsgr'), D.sgr, { single: true });
       } else if (ctx.tab === 'propia') {
         const pr = D.P.proc.rows; const one = pr.filter((r) => num(r.respuestas_al_procedimiento) === 1).length;
-        body.innerHTML = `<div class="notice info"><b>Contratación propia del fondo${tip('propia')}</b><span>Aquí aparece solo lo que el fondo publicó en SECOP II como entidad contratante. Si no hay nada, lo que contrató con los recursos recibidos hay que pedirlo al fondo o a la entidad que le giró.</span></div>
+        body.innerHTML = `<div class="notice info"><b>Contratación propia del fondo${tip('propia')}</b><span>Aquí aparece lo que el fondo publicó en SECOP II o en SECOP I como entidad contratante: a quién subcontrató, por cuánto y con qué modalidad. Si no hay nada, lo que contrató con los recursos recibidos hay que pedirlo al fondo o a la entidad que le giró.</span></div>
           <div class="card"><h3>Convocatorias y procesos publicados</h3>${errBox(D.P.proc)}${one ? `<p><span class="badge media">${fmtN(one)} con una sola oferta</span>${tip('unaoferta')}</p>` : ''}<div id="tbp"></div>${qlink(D.P.proc)}</div>
           <div class="card"><h3>Contratos firmados por el fondo</h3>${errBox(D.P.own)}<div id="tbo"></div>${qlink(D.P.own)}</div>`;
         dataTable($('#tbp'), pr, [
