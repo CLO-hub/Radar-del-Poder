@@ -329,6 +329,10 @@ td.objeto { min-width: 260px; max-width: 460px; }
     ordenador: ['Ordenador del gasto', 'El funcionario con facultad para comprometer el presupuesto de la entidad y firmar los contratos (alcalde, gobernador, secretario o delegado).'],
     supervisor: ['Supervisor', 'Funcionario de la entidad encargado de vigilar que el contrato se cumpla.'],
     replegal: ['Representante legal', 'Persona que firma y responde a nombre del fondo o contratista, según lo declarado en cada contrato de SECOP II.'],
+    camino: ['Mecanismo de gasto', 'Hay tres caminos para gastar las regalías. A: la entidad contrata ella misma. B: la entidad le firma un contrato o convenio a un fondo mixto. C: la entidad designa al fondo como ejecutor del proyecto y el fondo escoge, contrata y paga.'],
+    caminoA: ['Camino A', 'La alcaldía o la gobernación es la ejecutora: abre el proceso en SECOP II, escoge al contratista y le paga. Todo queda publicado.'],
+    caminoB: ['Camino B', 'La entidad le firma un contrato o convenio a un fondo mixto, casi siempre de forma directa. El contrato con el fondo se ve en SECOP; lo que el fondo subcontrata, casi nunca.'],
+    caminoC: ['Camino C', 'La entidad (o el OCAD) designa al fondo mixto como ejecutor del proyecto de regalías, según el artículo 37 de la Ley 2056 de 2020. No hay contrato entre los dos en SECOP: solo se ve en el registro de proyectos del DNP.'],
     tipoent: ['Quién contrata', 'Por defecto la app solo muestra a las alcaldías y gobernaciones con sus secretarías y dependencias (administración central). La clasificación se deduce del nombre de la entidad. Puede sumar las entidades descentralizadas (institutos, empresas, concejos) o ver todas, incluidas las nacionales como el SENA. En los proyectos de regalías, «alcaldía» son los aprobados para un municipio y «gobernación» los departamentales.'],
     sede: ['Municipio y departamento', 'Sede de la entidad contratante según SECOP. En las capitales incluye a la alcaldía, a la gobernación y a las entidades nacionales con oficina allí.'],
     relacion: ['Relación con un fondo', 'Un territorio se relaciona con un fondo mixto de dos formas: una entidad con sede allí le contrata (SECOP), o el fondo ejecuta un proyecto de regalías aprobado para ese territorio (DNP).'],
@@ -604,7 +608,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
   }
 
   // ---------------------------------------------------------------- Estado y filtros globales
-  const F = { pk: 'todo', dept: '', muni: '', et: 'terr', mc: 'all', fondo: '', q: '', atip: false };
+  const F = { pk: 'todo', dept: '', muni: '', et: 'terr', cam: 'all', mc: 'all', fondo: '', q: '', atip: false };
   let CORE = null; let loading = null;
   async function ensureCore() {
     const P = getPeriod(F.pk);
@@ -627,17 +631,17 @@ td.objeto { min-width: 260px; max-width: 460px; }
   function scope(opts = {}) {
     const D = CORE; const qn = clean(F.q);
     const base = D.rows.filter(inTerr);
-    const atip = base.filter((r) => r._v >= ATIPICO);
+    const atip = F.cam === 'C' || F.cam === 'A' ? [] : base.filter((r) => r._v >= ATIPICO && (F.cam !== 'Breg' || r._sgr > 0));
     const pool = F.atip ? base : base.filter((r) => r._v < ATIPICO);
-    const rows = pool.filter((r) => (opts.noEt || etOk(r)) && (opts.noMc || F.mc === 'all' || (F.mc === 'sin' ? SIN.has(r._m) : r._m === F.mc)) && (opts.noFondo || !F.fondo || r._fk === F.fondo) && (!qn || clean(`${r.nombre_entidad} ${r.proveedor_adjudicado} ${r.objeto_del_contrato} ${r.id_contrato}`).includes(qn)));
-    const sgr = D.sgr.rows.filter((r) => inTerr(r) && (opts.noEt || sgrEtOk(r)) && (opts.noFondo || !F.fondo || sgrEk(r) === F.fondo) && (!qn || clean(`${r.entidadejecutora} ${r.nombre} ${r.codigobpin} ${r.nomocad} ${r.sector}`).includes(qn)));
+    const rows = pool.filter((r) => F.cam !== 'C' && F.cam !== 'A' && (F.cam !== 'Breg' || r._sgr > 0) && (opts.noEt || etOk(r)) && (opts.noMc || F.mc === 'all' || (F.mc === 'sin' ? SIN.has(r._m) : r._m === F.mc)) && (opts.noFondo || !F.fondo || r._fk === F.fondo) && (!qn || clean(`${r.nombre_entidad} ${r.proveedor_adjudicado} ${r.objeto_del_contrato} ${r.id_contrato}`).includes(qn)));
+    const sgr = D.sgr.rows.filter((r) => (F.cam === 'all' || F.cam === 'C') && inTerr(r) && (opts.noEt || sgrEtOk(r)) && (opts.noFondo || !F.fondo || sgrEk(r) === F.fondo) && (!qn || clean(`${r.entidadejecutora} ${r.nombre} ${r.codigobpin} ${r.nomocad} ${r.sector}`).includes(qn)));
     const s1 = D.s1.rows.filter(inTerr);
     const label = F.muni ? `${munShow(F.muni)}${F.dept ? ', ' + deptName(F.dept) : ''}` : F.dept ? deptName(F.dept) : 'todo el país';
     return { D, rows, pool, atip, sgr, s1, label };
   }
   function filterLabel() {
     const P = getPeriod(F.pk); const parts = [P.l, F.muni ? `${munShow(F.muni)}${F.dept ? ', ' + deptName(F.dept) : ''}` : F.dept ? deptName(F.dept) : 'Todo el país'];
-    parts.push(ET_L[F.et] || ET_L.terr);
+    parts.push(ET_L[F.et] || ET_L.terr); if (F.cam !== 'all') parts.push('Camino ' + CAM_L[F.cam]);
     if (F.mc !== 'all') parts.push(F.mc === 'sin' ? 'Sin competencia' : MODL[F.mc]);
     if (F.fondo && CORE) parts.push('Fondo: ' + fondoNom(F.fondo));
     if (F.q) parts.push(`Texto: «${F.q}»`);
@@ -679,11 +683,12 @@ td.objeto { min-width: 260px; max-width: 460px; }
       <label><span>Departamento</span><select id="f_dept"><option value="">Todos</option>${DEPTS_SORTED.map((d) => `<option value="${d.code}" ${F.dept === d.code ? 'selected' : ''}>${esc(d.name)}</option>`).join('')}</select></label>
       <label><span>Municipio</span><select id="f_muni"><option value="">Todos</option>${muns.map((m) => `<option value="${esc(m)}" ${F.muni === m ? 'selected' : ''}>${esc(munShow(m))}${withRel.has(m) ? '' : ' · sin fondos mixtos'}</option>`).join('')}</select></label>
       <label><span>Quién contrata${tip('tipoent')}</span><select id="f_et">${Object.entries(ET_L).map(([k, l]) => `<option value="${k}" ${F.et === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label><span>Mecanismo de gasto${tip('camino')}</span><select id="f_cam">${Object.entries(CAM_L).map(([k, l]) => `<option value="${k}" ${F.cam === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label><span>Modalidad</span><select id="f_mc">${[['all', 'Todas'], ['sin', 'Sin competencia'], ['dir', 'Solo directa'], ['int', 'Solo «interadministrativo»'], ['esp', 'Solo régimen especial'], ['comp', 'Con competencia']].map(([k, l]) => `<option value="${k}" ${F.mc === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label><span>Fondo</span><select id="f_fondo"><option value="">Todos</option>${fonds.map((f) => `<option value="${esc(f.key)}" ${F.fondo === f.key ? 'selected' : ''}>${esc(titleCase(f.nom).slice(0, 60))}</option>`).join('')}${eo.length ? `<optgroup label="Solo ejecutan regalías (sin contratos en SECOP II)">${eo.map((f) => `<option value="${esc(f.key)}" ${F.fondo === f.key ? 'selected' : ''}>${esc(titleCase(f.nom).slice(0, 60))}</option>`).join('')}</optgroup>` : ''}</select></label>
       <label class="fq"><span>Buscar fondo, entidad, proyecto u objeto</span><span class="fqrow"><input id="f_q" type="search" list="f_qlist" value="${esc(F.q)}" placeholder="Escriba y pulse Buscar…" autocomplete="off"><button type="button" class="btn primary sm" id="f_qgo">Buscar</button>${F.q ? '<button type="button" class="btn sm" id="f_qx">Limpiar</button>' : ''}</span><datalist id="f_qlist">${names.map((n) => `<option value="${esc(n)}"></option>`).join('')}</datalist></label>`;
     const set = (id, k, reload) => { const el = $(id); el.onchange = () => { F[k] = el.value; if (k === 'dept') F.muni = ''; if (reload) CORE = null; route(); }; };
-    set('#f_pk', 'pk', true); set('#f_dept', 'dept'); set('#f_muni', 'muni'); set('#f_et', 'et'); set('#f_mc', 'mc'); set('#f_fondo', 'fondo');
+    set('#f_pk', 'pk', true); set('#f_dept', 'dept'); set('#f_muni', 'muni'); set('#f_et', 'et'); set('#f_cam', 'cam'); set('#f_mc', 'mc'); set('#f_fondo', 'fondo');
     const go = () => { F.q = $('#f_q').value.trim(); drawFilters(); route(true); };
     $('#f_qgo').onclick = go; $('#f_q').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } };
     $('#f_q').onchange = go; $('#f_q').onsearch = go;
@@ -708,7 +713,8 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const fails = [['SECOP II · contratos por nombre', D.a], ['SECOP II · contratos por NIT', D.b], ['SECOP I', D.s1], ['DNP · regalías', D.sgr]].filter(([, p]) => !p.ok);
     const failBox = fails.length ? `<div class="notice"><b>Consulta incompleta</b><span>No respondieron: ${fails.map(([l, p]) => `${esc(l)}${p.status ? ' (HTTP ' + p.status + ')' : ''}`).join('; ')}. Las cifras pueden estar por debajo de la realidad. <button class="linkbtn" id="retry">Reintentar</button></span></div>` : '';
     const fn = { panorama: renderPanorama, mapa: renderMapa, relaciones: renderRelaciones, entidades: renderEntidades, fondos: renderFondos, contratos: renderContratos, alertas: renderAlertas, ficha: () => (current ? current.render() : renderPanorama()) }[h] || renderPanorama;
-    fn(failBox);
+    if (F.cam === 'A' && h !== 'ficha') await renderCaminoA(failBox); else fn(failBox);
+    bindCaminos();
     const rt = $('#retry'); if (rt) rt.onclick = () => { cache.clear(); CORE = null; route(); };
     bindNav(view());
   }
@@ -760,6 +766,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
         <div class="kpi"><span class="l">Fondos con contratos</span><span class="v">${fmtN(fondos.length)}</span><span class="s">${fmtN(new Set(R.map((r) => r._mun).filter(Boolean)).size)} municipios</span></div>
         <div class="kpi"><span class="l">Regalías ejecutadas por fondos${tip('ejecutor')}</span><span class="v">${fmtCOP(sum(sg, '_v'))}</span><span class="s">${fmtN(sg.length)} proyectos · DNP</span></div>
       </div>
+      ${F.cam === 'all' ? caminosCard(sc) : ''}
       ${!R.length ? (sg.length ? `<div class="notice info"><b>Sin contratos en SECOP II, pero con regalías ejecutadas por fondos mixtos${tip('ejecutor')}</b><span>Ninguna entidad con sede en ${esc(sc.label)} registra contratos con fondos mixtos en SECOP II para esta selección. Aun así, el DNP registra ${fmtN(sg.length)} proyecto(s) de regalías de este territorio, por ${fmtCOP(sum(sg, '_v'))}, con un fondo mixto como entidad ejecutora. En esa figura el fondo no aparece como contratista de la entidad territorial, sino como ejecutor del proyecto: recibe los recursos de regalías y escoge por su cuenta a los contratistas, y esos contratos no quedan en SECOP II. El Consejo de Estado conceptuó en junio de 2026 (Sala de Consulta, radicado 2563) que todo ejecutor de regalías debe aplicar el estatuto de contratación pública. Los proyectos están abajo; lo que el fondo contrató se ve en su ficha, pestaña «Convocatorias y contratación propia», solo si lo publicó en SECOP II.</span></div>` : `<div class="notice info"><b>${esc(sc.label)}: sin relación registrada con fondos mixtos</b><span>Para esta selección no hay contratos con fondos mixtos en SECOP II ni proyectos de regalías con un fondo mixto como ejecutor. Es un resultado, no un error: las entidades de este territorio contratan sus regalías por otras vías. ${F.q ? 'Revise también que el texto buscado esté bien escrito o pruebe con una sola palabra del nombre. ' : ''}Puede ampliar el periodo o ver cómo se contratan aquí las regalías de todo origen.</span>${F.dept ? '<button class="btn sm" id="pan_goreg" style="width:fit-content">Ver las regalías de este territorio →</button>' : ''}</div>`) : `
       <div class="card"><h3>Lo que muestran los datos</h3><ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">${ins.map((t) => `<li>${t}</li>`).join('')}</ul></div>
       <div class="grid2">
@@ -1358,6 +1365,70 @@ td.objeto { min-width: 260px; max-width: 460px; }
         <tr><td>SECOP II – Archivos Descarga (2021 a 2026)</td><td>Informes, actas y demás documentos de cada contrato.</td><td>No se listan documentos personales del contratista.</td></tr>
       </tbody></table></div></div>
       <div class="card"><h3>Consultas hechas en esta sesión</h3>${state.qlog.length ? `<div class="tablewrap"><table><tbody>${state.qlog.slice(-40).reverse().map((q) => `<tr><td>${esc(q.ds)}</td><td class="r">${fmtN(q.n)} filas</td><td><a href="${esc(q.url)}" target="_blank" rel="noopener">Abrir consulta ↗</a></td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Aún no se han hecho consultas.</p>'}</div></div>`;
+  }
+  // ---------------------------------------------------------------- Mecanismo de gasto de las regalías (caminos A, B y C)
+  const CAM_L = { all: 'Todos los caminos', A: 'A · La entidad contrata ella misma', B: 'B · Contrata a un fondo mixto', Breg: 'B · Solo contratos con fondos que reportan regalías', C: 'C · Designa al fondo como ejecutor' };
+  const CAMA = { key: '', p: null, D: null };
+  // Regalías contratadas directamente por las entidades (SECOP II), agregadas por entidad y modalidad
+  function loadCaminoA(P) {
+    const d = F.dept ? DEPTS.find((x) => x.code === F.dept) : null; const key = P.k + '|' + P.from + '|' + (d ? d.code : '');
+    if (CAMA.key === key && CAMA.p) return CAMA.p;
+    CAMA.key = key; CAMA.D = null;
+    const W = `sistema_general_de_regal_as > 0 AND ${periodWhere('fecha_de_firma', P)}${d ? ` AND upper(departamento) like '%${d.key}%'` : ''}`;
+    CAMA.p = part('contratos', { select: 'nombre_entidad,nit_entidad,departamento,ciudad,orden,modalidad_de_contratacion,count(*) as n,sum(sistema_general_de_regal_as) as s', where: W, group: 'nombre_entidad,nit_entidad,departamento,ciudad,orden,modalidad_de_contratacion', limit: 50000 }).then((r) => {
+      for (const x of r.rows) { const dd = deptOf(x.departamento); x._dep = dd ? dd.code : ''; x._mun = munName(x.ciudad) || munFromName(x._dep, x.nombre_entidad); x._t = entType(x.nombre_entidad, x.orden); x._m = modClass(x.modalidad_de_contratacion, ''); x._n = num(x.n); x._s = num(x.s); }
+      CAMA.D = r; return r;
+    });
+    return CAMA.p;
+  }
+  function camAScope() {
+    const rows = (CAMA.D ? CAMA.D.rows : []).filter((r) => inTerr(r) && etOk(r) && (F.mc === 'all' || (F.mc === 'sin' ? SIN.has(r._m) : r._m === F.mc || (F.mc === 'int' && r._m === 'dir'))) && (!F.q || clean(r.nombre_entidad).includes(clean(F.q))));
+    const m = new Map();
+    for (const r of rows) { const k = r.nit_entidad || r.nombre_entidad; let g = m.get(k); if (!g) { g = { key: k, nom: r.nombre_entidad, nit: r.nit_entidad, t: r._t, dep: r._dep, mun: r._mun, n: 0, s: 0, by: {} }; m.set(k, g); } g.n += r._n; g.s += r._s; g.by[r._m] = (g.by[r._m] || 0) + r._s; }
+    const ents = [...m.values()].sort((a, b) => b.s - a.s); const by = {}; for (const r of rows) by[r._m] = (by[r._m] || 0) + r._s;
+    return { rows, ents, by, tot: sum(rows, '_s'), n: sum(rows, '_n') };
+  }
+  async function renderCaminoA(failBox) {
+    const P = getPeriod(F.pk);
+    if (!CAMA.D || CAMA.key !== P.k + '|' + P.from + '|' + (F.dept || '')) { view().innerHTML = '<p class="loading">Consultando en SECOP II las regalías que contrataron directamente las entidades…</p>'; await loadCaminoA(P); if (F.cam !== 'A') return; }
+    const A = camAScope(); const sinV = (A.by.dir || 0) + (A.by.esp || 0) + (A.by.int || 0); const maxE = A.ents.length ? A.ents[0].s : 1;
+    const lugar = F.muni ? `${munShow(F.muni)}${F.dept ? ', ' + deptName(F.dept) : ''}` : F.dept ? deptName(F.dept) : 'todo el país';
+    view().innerHTML = `<div class="stack">${head('Camino A', 'Regalías que las entidades contrataron ellas mismas', 'La alcaldía o la gobernación es la ejecutora: abre el proceso en SECOP II y le paga al contratista. Aquí no intervienen fondos mixtos.')}${failBox || ''}
+      ${!CAMA.D.ok ? '<div class="notice"><b>SECOP II no respondió</b><span>No fue posible traer las regalías contratadas directamente. Intente de nuevo en unos minutos.</span></div>' : ''}
+      <div class="kpis">
+        <div class="kpi"><span class="l">Regalías contratadas${tip('sgr')}</span><span class="v" title="${fullCOP(A.tot)}">${fmtCOP(A.tot)}</span><span class="s">${fmtN(A.n)} contratos · SECOP II</span></div>
+        <div class="kpi"><span class="l">Sin competencia${tip('sin')}</span><span class="v">${fmtPct(A.tot ? sinV / A.tot : 0)}</span><span class="s">${fmtCOP(sinV)}</span></div>
+        <div class="kpi"><span class="l">Contratación directa${tip('dir')}</span><span class="v">${fmtPct(A.tot ? (A.by.dir || 0) / A.tot : 0)}</span><span class="s">${fmtCOP(A.by.dir || 0)}</span></div>
+        <div class="kpi"><span class="l">Régimen especial${tip('esp')}</span><span class="v">${fmtPct(A.tot ? (A.by.esp || 0) / A.tot : 0)}</span><span class="s">${fmtCOP(A.by.esp || 0)}</span></div>
+        <div class="kpi"><span class="l">Entidades${tip('tipoent')}</span><span class="v">${fmtN(A.ents.length)}</span><span class="s">${esc(lugar)}</span></div>
+      </div>
+      ${!A.ents.length ? `<div class="notice info"><b>Sin regalías contratadas directamente para esta selección</b><span>Ninguna entidad de ${esc(lugar)} que cumpla los filtros reporta contratos con regalías en SECOP II. Puede que publique en SECOP I, que no identifica la fuente de los recursos, o que sus regalías se ejecuten por el camino C.</span></div>` : `
+      <div class="card"><h3>Entidades que más regalías contratan por su cuenta</h3>${modLegend()}<div class="bars">${A.ents.slice(0, 15).map((e) => barRow(e.nom, modParts(e.by), maxE, fmtCOP(e.s))).join('')}</div></div>
+      <div class="card"><h3>Todas las entidades</h3><div id="camA_tb"></div><p class="muted" style="font-size:.78rem">Solo cuenta el valor que la entidad marcó como regalías en cada contrato. En este camino la contratación directa no se puede separar de los convenios interadministrativos.</p>${qlink(CAMA.D)}</div>`}</div>`;
+    if (A.ents.length) dataTable($('#camA_tb'), A.ents, [
+      { k: 'e', l: 'Entidad', sort: true, val: (e) => e.nom, html: (e) => `${esc(e.nom)}<span class="sub">${esc(ENT_T[e.t] || '')}${e.mun || e.dep ? ' · ' + esc([munShow(e.mun), deptName(e.dep)].filter(Boolean).join(', ')) : ''}</span>` },
+      { k: 'n', l: 'Contratos', r: true, sort: true, val: (e) => e.n, html: (e) => fmtN(e.n) },
+      { k: 's', l: 'Regalías contratadas', r: true, sort: true, val: (e) => e.s, html: (e) => `<span title="${fullCOP(e.s)}">${fmtCOP(e.s)}</span>` },
+      { k: 'm', l: 'Modalidad', tip: 'sin', val: (e) => sinShare({ v: e.s, by: e.by }), html: (e) => modBar(e.by, e.s) },
+      { k: 'p', l: '% sin competencia', r: true, sort: true, val: (e) => sinShare({ v: e.s, by: e.by }), html: (e) => fmtPct(sinShare({ v: e.s, by: e.by })) },
+    ], { sort: 's', size: 25, empty: 'Sin entidades.' });
+    bindNav(view());
+  }
+  // Tarjeta comparativa de los tres caminos (Panorama)
+  function caminosCard(sc) {
+    const b = sum(sc.rows, '_sgr'); const bn = sc.rows.filter((r) => r._sgr > 0).length; const sg = sc.sgr.filter((r) => r._ok); const c = sum(sg, '_v');
+    return `<div class="card"><h3>Por qué camino se gastan las regalías${tip('camino')}</h3>
+      <div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))">
+        <div class="kpi"><span class="l">A · La entidad contrata${tip('caminoA')}</span><span class="v" id="camA_v">…</span><span class="s" id="camA_s">consultando SECOP II</span><button class="btn sm" data-cam="A" style="width:fit-content;margin-top:6px">Ver camino A →</button></div>
+        <div class="kpi"><span class="l">B · Contrata a un fondo mixto${tip('caminoB')}</span><span class="v" title="${fullCOP(b)}">${fmtCOP(b)}</span><span class="s">${fmtN(bn)} contratos con fondos reportan regalías, de ${fmtN(sc.rows.length)}</span><button class="btn sm" data-cam="Breg" style="width:fit-content;margin-top:6px">Ver camino B →</button></div>
+        <div class="kpi"><span class="l">C · El fondo es el ejecutor${tip('caminoC')}</span><span class="v" title="${fullCOP(c)}">${fmtCOP(c)}</span><span class="s">${fmtN(sg.length)} proyectos · DNP</span><button class="btn sm" data-cam="C" style="width:fit-content;margin-top:6px">Ver camino C →</button></div>
+      </div>
+      <p class="muted" style="font-size:.78rem">A y B salen de SECOP II y dependen del periodo elegido. C sale del registro de proyectos del DNP, que no trae fechas, así que no se filtra por periodo.</p></div>`;
+  }
+  function bindCaminos() {
+    $$('[data-cam]').forEach((b) => { b.onclick = () => { F.cam = b.dataset.cam; drawFilters(); route(); }; });
+    const v = $('#camA_v'); if (!v) return;
+    loadCaminoA(getPeriod(F.pk)).then(() => { const el = $('#camA_v'); if (!el) return; const A = camAScope(); el.textContent = fmtCOP(A.tot); el.title = fullCOP(A.tot); $('#camA_s').textContent = CAMA.D.ok ? `${fmtN(A.n)} contratos con regalías · SECOP II` : 'SECOP II no respondió'; });
   }
 
   // ---------------------------------------------------------------- Descargas: CSV, Excel y PDF
