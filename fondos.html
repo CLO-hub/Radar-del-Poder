@@ -30,6 +30,7 @@
   --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --s-xs: .78rem; --s-sm: .875rem; --s-md: 1rem; --s-lg: 1.25rem; --s-xl: 1.6rem; --r: 10px;
   --c-dir: #FF5C67; --c-int: #E0A21B; --c-esp: #6C3BFF; --c-comp: #1F8A5B;
+  --fu-sgr: #248BFF; --fu-prop: #0E9F8E; --fu-otras: #B7791F; --fu-nd: #9AA3AF;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -37,6 +38,7 @@
     --violet: #9474FF; --violet-ink: #B39CFF; --violet-soft: #2A2350; --coral: #FF6E78; --coral-ink: #FF8C94; --coral-soft: #3A1D25;
     --blue: #4DA2FF; --blue-ink: #7DBBFF; --blue-soft: #16294A; --amber: #F2B84B; --amber-soft: #3A2E12; --ok: #4FD39A; --ok-soft: #12332A;
     --band: #0B0B13; --band-line: #26243A; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25); color-scheme: dark;
+    --fu-sgr: #3A8FE8; --fu-prop: #1E9E8C; --fu-otras: #BF872A; --fu-nd: #6B7280;
   }
 }
 :root[data-theme="dark"] {
@@ -44,6 +46,7 @@
   --violet: #9474FF; --violet-ink: #B39CFF; --violet-soft: #2A2350; --coral: #FF6E78; --coral-ink: #FF8C94; --coral-soft: #3A1D25;
   --blue: #4DA2FF; --blue-ink: #7DBBFF; --blue-soft: #16294A; --amber: #F2B84B; --amber-soft: #3A2E12; --ok: #4FD39A; --ok-soft: #12332A;
   --band: #0B0B13; --band-line: #26243A; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25); color-scheme: dark;
+    --fu-sgr: #3A8FE8; --fu-prop: #1E9E8C; --fu-otras: #BF872A; --fu-nd: #6B7280;
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -170,6 +173,14 @@ td.objeto { min-width: 260px; max-width: 460px; }
 .flow .lk { fill: none; stroke-opacity: .32; }
 .flow .lk:hover { stroke-opacity: .7; }
 .flow rect { cursor: pointer; }
+.flow3 text { font-size: 12px; } .flow3 .halo { paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+.flow3 .colh { font: 700 10.5px var(--f-mono); letter-spacing: .08em; fill: var(--muted); }
+.flow3 .nd:hover text { font-weight: 700; }
+.legend i.dash { background: repeating-linear-gradient(90deg, var(--fu-sgr) 0 5px, transparent 5px 8px); width: 18px; height: 4px; vertical-align: 2px; }
+.filters .foco { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.filters .foco > span { font-family: var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--band-muted); font-size: .7rem; margin-right: 4px; }
+.filters .foco button { font: 700 var(--s-xs) var(--f-body); padding: 6px 12px; border-radius: 999px; border: 1.5px solid var(--band-line); background: #1E1D2E; color: var(--band-ink); cursor: pointer; }
+.filters .foco button[aria-pressed="true"] { background: var(--lime); border-color: var(--lime); color: #151522; }
 /* Diálogo de descarga */
 .modal { position: fixed; inset: 0; background: rgba(10,10,18,.55); z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding: 6vh 14px; overflow: auto; }
 .modal .card { max-width: 620px; width: 100%; }
@@ -354,7 +365,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
     Otra: ['Otras fuentes', 'Asignaciones del SGR que no encajan en las categorías anteriores (por ejemplo, programas especiales o corporaciones autónomas).'],
     ocad: ['OCAD', 'Órgano Colegiado de Administración y Decisión: la instancia que aprueba proyectos de regalías. Desde la Ley 2056 de 2020 quedan los OCAD regionales, el OCAD Paz y el de ciencia y tecnología; en asignaciones directas e inversión local aprueba la propia entidad territorial. En los datos del DNP indica el territorio o instancia que aprobó.'],
     bpin: ['BPIN', 'Código único de cada proyecto de inversión pública en el Banco de Programas y Proyectos de Inversión Nacional. Sirve para seguir un proyecto en todas las fuentes.'],
-    ejecutor: ['Entidad ejecutora', 'La entidad designada para contratar y responder por la ejecución de un proyecto de regalías. Cuando es un fondo mixto, la plata pública se contrata por derecho privado.'],
+    ejecutor: ['Entidad ejecutora', 'La entidad designada para contratar y responder por la ejecución de un proyecto de regalías. Cuando es un fondo mixto, el fondo contrata con su propio régimen especial, aunque el Consejo de Estado conceptuó en 2026 que todo ejecutor de regalías debe aplicar el estatuto de contratación pública.'],
     interventor: ['Interventor', 'Persona o firma externa contratada para vigilar técnica, financiera y jurídicamente que un contrato u obra se cumpla.'],
     avance: ['Avance físico y financiero', 'Porcentajes que el ejecutor reporta al sistema de seguimiento de regalías: cuánto de la obra o actividad está hecho (físico) y cuánto del dinero se ha pagado (financiero).'],
     adelante: ['Pagos adelante de la obra', 'Señal: el avance financiero supera en 30 puntos o más al avance físico. Se ha pagado bastante más de lo que se ha ejecutado.'],
@@ -381,6 +392,10 @@ td.objeto { min-width: 260px; max-width: 460px; }
     caminoC: ['Camino C', 'La entidad (o el OCAD) designa al fondo mixto como ejecutor del proyecto de regalías, según el artículo 37 de la Ley 2056 de 2020. No hay contrato entre los dos en SECOP: solo se ve en el registro de proyectos del DNP.'],
     tipoent: ['Quién contrata', 'Por defecto la app solo muestra a las alcaldías y gobernaciones con sus secretarías y dependencias (administración central). La clasificación se deduce del nombre de la entidad. Puede sumar las entidades descentralizadas (institutos, empresas, concejos) o ver todas, incluidas las nacionales como el SENA. En los proyectos de regalías, «alcaldía» son los aprobados para un municipio y «gobernación» los departamentales.'],
     sede: ['Municipio y departamento', 'Sede de la entidad contratante según SECOP. En las capitales incluye a la alcaldía, a la gobernación y a las entidades nacionales con oficina allí.'],
+    fuenterec: ['Fuente de los recursos', 'De dónde sale la plata del contrato, según lo que la entidad declaró en SECOP II: regalías (SGR), recursos propios de la alcaldía o gobernación, Sistema General de Participaciones (SGP), Presupuesto General de la Nación o crédito. SECOP I no informa la fuente. Un contrato puede mezclar varias; se clasifica por la que más aporta.'],
+    derivado: ['Contratación del fondo', 'Los contratos y procesos que el propio fondo publicó en SECOP como entidad contratante: a quién le pasa la plata que recibió. SECOP no dice con recursos de qué entidad se paga cada uno, así que el territorio se deduce del texto del objeto.'],
+    sincontr: ['Sin contratista publicado', 'El fondo publicó el proceso en SECOP II pero no registró a quién se lo adjudicó ni subió el contrato. Es la situación más común en los fondos mixtos y la razón para pedir el expediente.'],
+    foco: ['Entidades en foco', 'Atajos para revisar de una vez a FONCOLOMBIA, EDUBAR y GESPRODE. EDUBAR no es un fondo mixto sino una empresa industrial y comercial del Distrito de Barranquilla, pero recibe recursos de la Alcaldía y la Gobernación y los subcontrata del mismo modo.'],
     relacion: ['Relación con un fondo', 'Un territorio se relaciona con un fondo mixto de dos formas: una entidad con sede allí le contrata (SECOP), o el fondo ejecuta un proyecto de regalías aprobado para ese territorio (DNP).'],
     regsecop: ['Regalías en el contrato', 'Valor que el contrato registra en SECOP II como financiado con el Sistema General de Regalías.'],
     propia: ['Contratación propia del fondo', 'Lo que el fondo contrata con terceros. Solo se ve cuando lo publica en SECOP II; muchos no lo hacen porque se rigen por derecho privado.'],
@@ -476,7 +491,11 @@ td.objeto { min-width: 260px; max-width: 460px; }
     ['901039684', 'FONPACÍFICO', ['FONPACIFICO']], ['800199735', 'GESPRODE', ['GESPRODE']], ['800236777', 'FOMCULTURA', ['FOMCULTURA']],
     ['901783188', 'FINVERPAZ', ['FINVERPAZ', 'INVERSION Y DESARROLLO PARA LA PAZ']], ['901878391', 'FOMINDETER', ['FOMINDETER']], ['901905087', 'FOMIDES', ['FOMIDES']],
     ['901473251', 'FONCOLOMBIA', ['FONCOLOMBIA']], ['800255143', 'FONMIXCAR', ['FONMIXCAR']],
+    ['800091140', 'EDUBAR', ['EDUBAR', 'EMPRESA DE DESARROLLO URBANO DE BARRANQUILLA']],
   ];
+  // Entidades en foco (botones de énfasis). EDUBAR no es un fondo mixto: es una empresa industrial y comercial de Barranquilla que cumple el mismo papel de intermediaria.
+  const FOCO = [['901473251', 'FONCOLOMBIA'], ['800091140', 'EDUBAR'], ['800199735', 'GESPRODE']];
+  const NO_FM = new Set(['800091140']);
   const FX_KEY = 'radar_fondos_nit_extra';
   const fxExtra = () => { try { return JSON.parse(localStorage.getItem(FX_KEY) || '[]').filter((x) => /^\d{6,12}$/.test(x)); } catch (_) { return []; } };
   const fxSaveExtra = (a) => { try { localStorage.setItem(FX_KEY, JSON.stringify([...new Set(a)])); } catch (_) { /* sin almacenamiento */ } };
@@ -579,7 +598,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
   const alBadges = (r) => (r._al || []).map((k) => `<span class="badge ${AL[k][1]}" title="${esc(G[AL[k][2]]?.[1] || '')}">${esc(AL[k][0].split(' (')[0])}</span>`).join(' ');
 
   // ---------------------------------------------------------------- Carga principal
-  const FS = 'id_contrato,referencia_del_contrato,nombre_entidad,nit_entidad,departamento,ciudad,orden,proveedor_adjudicado,documento_proveedor,objeto_del_contrato,tipo_de_contrato,modalidad_de_contratacion,justificacion_modalidad_de,estado_contrato,fecha_de_firma,fecha_de_inicio_del_contrato,fecha_de_fin_del_contrato,valor_del_contrato,valor_pagado,dias_adicionados,sistema_general_de_regal_as,urlproceso,nombre_representante_legal,nombre_ordenador_del_gasto,nombre_supervisor';
+  const FS = 'id_contrato,referencia_del_contrato,nombre_entidad,nit_entidad,departamento,ciudad,orden,proveedor_adjudicado,documento_proveedor,objeto_del_contrato,tipo_de_contrato,modalidad_de_contratacion,justificacion_modalidad_de,estado_contrato,fecha_de_firma,fecha_de_inicio_del_contrato,fecha_de_fin_del_contrato,valor_del_contrato,valor_pagado,dias_adicionados,sistema_general_de_regal_as,recursos_propios_alcald_as_gobernaciones_y_resguardos_ind_genas_,recursos_propios,sistema_general_de_participaciones,presupuesto_general_de_la_nacion_pgn,recursos_de_credito,urlproceso,nombre_representante_legal,nombre_ordenador_del_gasto,nombre_supervisor';
   const SGR_SEL = 'codigobpin,nombre,estado,valortotal,sector,entidadejecutora,departamento,ejecucionfisica,ejecucionfinanciera,nomocad,interventor';
   // Algunas entidades registran la ciudad como «No Definido»: se deduce del nombre (p. ej. «ALCALDIA DISTRITAL BARRANCABERMEJA»)
   const _mfn = new Map();
@@ -600,8 +619,18 @@ td.objeto { min-width: 260px; max-width: 460px; }
   function decorate(r) {
     r._m = modClass(r.modalidad_de_contratacion, r.justificacion_modalidad_de); r._t = entType(r.nombre_entidad, r.orden); r._v = num(r.valor_del_contrato); r._sgr = num(r.sistema_general_de_regal_as);
     const d = deptOf(r.departamento); r._dep = d ? d.code : ''; r._mun = munName(r.ciudad) || munFromName(r._dep, r.nombre_entidad);
-    r._fk = fondoKey(r); r._y = yr(r.fecha_de_firma); return r;
+    r._fk = fondoKey(r); r._y = yr(r.fecha_de_firma); fuenteOf(r); return r;
   }
+  // Fuente de los recursos de un contrato (SECOP II). Se clasifica por la fuente que más aporta.
+  const FU_L = { sgr: 'Regalías', prop: 'Recursos propios', otras: 'SGP, Nación o crédito', nd: 'Sin dato de fuente' };
+  const FU_C = { sgr: 'var(--fu-sgr)', prop: 'var(--fu-prop)', otras: 'var(--fu-otras)', nd: 'var(--fu-nd)' };
+  function fuenteOf(r) {
+    const prop = num(r.recursos_propios_alcald_as_gobernaciones_y_resguardos_ind_genas_) + num(r.recursos_propios);
+    const otras = num(r.sistema_general_de_participaciones) + num(r.presupuesto_general_de_la_nacion_pgn) + num(r.recursos_de_credito);
+    r._fu = { sgr: r._sgr, prop, otras }; const top = Object.entries(r._fu).sort((a, b) => b[1] - a[1])[0];
+    r._fuk = top && top[1] > 0 ? top[0] : 'nd'; return r;
+  }
+  const fuOk = (r) => !F.fu || F.fu === 'all' || (F.fu === 'nd' ? r._fuk === 'nd' : (r._fu && r._fu[F.fu] > 0));
   async function attachFuentes(rows) {
     const bp = [...new Set(rows.map((r) => r.codigobpin).filter(Boolean))];
     const chunks = []; for (let i = 0; i < bp.length; i += 100) chunks.push(bp.slice(i, i + 100));
@@ -637,12 +666,14 @@ td.objeto { min-width: 260px; max-width: 460px; }
   async function loadCore(P) {
     const W = periodWhere('fecha_de_firma', P); const nits = fondoNits().flatMap(docVariants);
     const sgrW = ['MIXTO', 'GESPRODE', 'FONPACIFICO', 'FONCOLOMBIA', 'FINVERPAZ', 'FOMIDES', 'FOMINDETER', 'FOMCULTURA'].map((w) => `upper(entidadejecutora) like '%${w}%'`).join(' OR ');
-    const [a, b, s1, sgr] = await Promise.all([
+    const [a, b, s1, sgr, s1b] = await Promise.all([
       part('contratos', { select: FS, q: 'fondo mixto', where: `${W} AND upper(proveedor_adjudicado) like '%MIXTO%'`, limit: 30000 }),
       part('contratos', { select: FS, where: `${W} AND documento_proveedor in (${nits.map(sqlStr).join(',')})`, limit: 30000 }),
       part('integrado', { select: S1_SEL, q: 'fondo mixto', where: `origen='SECOPI' AND upper(nom_raz_social_contratista) like '%MIXTO%' AND ${periodWhere('fecha_de_firma_del_contrato', P)}`, limit: 30000 }),
       part('sgr', { select: SGR_SEL, where: sgrW, limit: 30000 }),
+      part('integrado', { select: S1_SEL, where: `origen='SECOPI' AND documento_proveedor in (${nits.map(sqlStr).join(',')}) AND ${periodWhere('fecha_de_firma_del_contrato', P)}`, limit: 30000 }),
     ]);
+    if (s1b.ok) s1.rows = [...s1.rows, ...s1b.rows];
     const seen = new Set(); const rows = [];
     for (const r of [...a.rows, ...b.rows]) { if (!r.id_contrato || seen.has(r.id_contrato) || !isFondo(r.proveedor_adjudicado, r.documento_proveedor)) continue; seen.add(r.id_contrato); rows.push(decorate({ ...r })); }
     let n1 = 0; for (const x of s1.rows) { if (!isFondo(x.nom_raz_social_contratista, x.documento_proveedor)) continue; const r = fromS1(x); const k = r.id_contrato + '|' + clean(r.proveedor_adjudicado) + '|' + r.valor_del_contrato; if (seen.has(k)) continue; seen.add(k); rows.push(decorate(r)); n1++; }
@@ -654,7 +685,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
   }
 
   // ---------------------------------------------------------------- Estado y filtros globales
-  const F = { pk: 'todo', dept: '', muni: '', et: 'terr', cam: 'all', mc: 'all', fondo: '', q: '', atip: false };
+  const F = { pk: 'todo', dept: '', muni: '', et: 'terr', cam: 'all', mc: 'all', fondo: '', q: '', atip: false, ent: '', fu: 'all', dterr: true };
   let CORE = null; let loading = null;
   async function ensureCore() {
     const P = getPeriod(F.pk);
@@ -669,6 +700,11 @@ td.objeto { min-width: 260px; max-width: 460px; }
   const isCore = (r) => (r._core != null ? r._core : (r._core = (r._t === 'alc' || r._t === 'gob') && !DESC_RE.test(normTxt(r.nombre_entidad))));
   const etOk = (r) => F.et === 'all' || (F.et === 'desc' ? r._t === 'alc' || r._t === 'gob' : isCore(r) && (F.et === 'terr' || r._t === F.et));
   const ET_L = { terr: 'Alcaldías y gobernaciones', alc: 'Solo alcaldías', gob: 'Solo gobernaciones', desc: 'Alcaldías, gobernaciones y sus entidades descentralizadas', all: 'Todas las entidades (incluye nacionales)' };
+  // Entidad territorial: las secretarías se agrupan en su alcaldía o gobernación
+  const terrKey = (r) => (r._tk != null ? r._tk : (r._tk = isCore(r) ? (r._t === 'alc' ? 'A|' + r._dep + '|' + (r._mun || '') : 'G|' + r._dep) : 'E|' + (r.nit_entidad || clean(r.nombre_entidad))));
+  const terrName = (k, fallback) => { const [t, d, m] = k.split('|'); return t === 'A' ? 'Alcaldía de ' + (munShow(m) || '(municipio sin dato)') : t === 'G' ? 'Gobernación de ' + (deptName(d) || '(sin departamento)') : titleCase(fallback || d); };
+  const sgrTerrKey = (r) => (r._mun ? 'A|' + r._dep + '|' + r._mun : /^DEPARTAMENTO D|^GOBERNACION/i.test(r.nomocad || '') || !/ - /.test(r.nomocad || '') ? 'G|' + r._dep : 'O|' + clean(r.nomocad || ''));
+  const fondoSel = (k) => !F.fondo || (F.fondo === '@foco' ? FOCO.some((x) => x[0] === k) : k === F.fondo);
   const sgrEtOk = (r) => (F.et === 'alc' ? !!r._mun : F.et === 'gob' ? !r._mun : true);
   const sgrEk = (r) => r._ek || (r._ek = ejecKey(r.entidadejecutora));
   // Fondos que solo figuran como ejecutores de regalías (sin contratos en SECOP II)
@@ -679,8 +715,8 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const base = D.rows.filter(inTerr);
     const atip = F.cam === 'C' || F.cam === 'A' ? [] : base.filter((r) => r._v >= ATIPICO && (F.cam !== 'Breg' || r._sgr > 0));
     const pool = F.atip ? base : base.filter((r) => r._v < ATIPICO);
-    const rows = pool.filter((r) => F.cam !== 'C' && F.cam !== 'A' && (F.cam !== 'Breg' || r._sgr > 0) && (opts.noEt || etOk(r)) && (opts.noMc || F.mc === 'all' || (F.mc === 'sin' ? SIN.has(r._m) : r._m === F.mc)) && (opts.noFondo || !F.fondo || r._fk === F.fondo) && (!qn || clean(`${r.nombre_entidad} ${r.proveedor_adjudicado} ${r.objeto_del_contrato} ${r.id_contrato}`).includes(qn)));
-    const sgr = D.sgr.rows.filter((r) => (F.cam === 'all' || F.cam === 'C') && inTerr(r) && (opts.noEt || sgrEtOk(r)) && (opts.noFondo || !F.fondo || sgrEk(r) === F.fondo) && (!qn || clean(`${r.entidadejecutora} ${r.nombre} ${r.codigobpin} ${r.nomocad} ${r.sector}`).includes(qn)));
+    const rows = pool.filter((r) => F.cam !== 'C' && F.cam !== 'A' && (F.cam !== 'Breg' || r._sgr > 0) && (opts.noEt || etOk(r)) && (opts.noMc || F.mc === 'all' || (F.mc === 'sin' ? SIN.has(r._m) : r._m === F.mc)) && (opts.noFondo || fondoSel(r._fk)) && (!F.ent || terrKey(r) === F.ent) && fuOk(r) && (!qn || clean(`${r.nombre_entidad} ${r.proveedor_adjudicado} ${r.objeto_del_contrato} ${r.id_contrato}`).includes(qn)));
+    const sgr = D.sgr.rows.filter((r) => (F.cam === 'all' || F.cam === 'C') && inTerr(r) && (opts.noEt || sgrEtOk(r)) && (opts.noFondo || fondoSel(sgrEk(r))) && (!F.ent || sgrTerrKey(r) === F.ent) && (F.fu === 'all' || F.fu === 'sgr') && (!qn || clean(`${r.entidadejecutora} ${r.nombre} ${r.codigobpin} ${r.nomocad} ${r.sector}`).includes(qn)));
     const s1 = D.s1.rows.filter(inTerr);
     const label = F.muni ? `${munShow(F.muni)}${F.dept ? ', ' + deptName(F.dept) : ''}` : F.dept ? deptName(F.dept) : 'todo el país';
     return { D, rows, pool, atip, sgr, s1, label };
@@ -689,7 +725,9 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const P = getPeriod(F.pk); const parts = [P.l, F.muni ? `${munShow(F.muni)}${F.dept ? ', ' + deptName(F.dept) : ''}` : F.dept ? deptName(F.dept) : 'Todo el país'];
     parts.push(ET_L[F.et] || ET_L.terr); if (F.cam !== 'all') parts.push('Camino ' + CAM_L[F.cam]);
     if (F.mc !== 'all') parts.push(F.mc === 'sin' ? 'Sin competencia' : MODL[F.mc]);
-    if (F.fondo && CORE) parts.push('Fondo: ' + fondoNom(F.fondo));
+    if (F.fondo && CORE) parts.push(F.fondo === '@foco' ? 'Foco: FONCOLOMBIA, EDUBAR y GESPRODE' : 'Fondo: ' + fondoNom(F.fondo));
+    if (F.ent) parts.push(terrName(F.ent, CORE && (CORE.rows.find((r) => terrKey(r) === F.ent) || {}).nombre_entidad));
+    if (F.fu !== 'all') parts.push('Fuente: ' + FU_L[F.fu]);
     if (F.q) parts.push(`Texto: «${F.q}»`);
     return parts.join(' · ');
   }
@@ -714,7 +752,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
   const span = (a, b) => { const x = yr(a), y = yr(b); return x && y ? (x === y ? x : `${x}–${y}`) : x || y || ''; };
 
   // ---------------------------------------------------------------- Marco: filtros, pestañas, rutas
-  const TABS = [['panorama', 'Panorama'], ['mapa', 'Mapa'], ['relaciones', 'Relaciones por territorio'], ['entidades', 'Entidades'], ['fondos', 'Fondos'], ['contratos', 'Contratos'], ['alertas', 'Alertas'], ['regalias', 'Regalías'], ['glosario', 'Glosario y fuentes']];
+  const TABS = [['panorama', 'Panorama'], ['flujo', 'Flujo de recursos'], ['contratistas', '¿Con quién contratan los fondos?'], ['contratos', 'Contratos'], ['entidades', 'Entidades'], ['fondos', 'Fondos'], ['mapa', 'Mapa'], ['alertas', 'Alertas'], ['regalias', 'Regalías (DNP)'], ['glosario', 'Glosario']];
   const view = () => $('#view');
   let current = null; // ficha abierta
   function drawFilters() {
@@ -723,18 +761,24 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const muns = CORE ? [...new Set([...withRel, ...allM, ...(F.muni ? [F.muni] : [])])].sort((a, b) => munShow(a).localeCompare(munShow(b), 'es')) : [];
     const fonds = CORE ? groupBy(CORE.rows.filter(inTerr), (r) => r._fk, (r) => ({ nom: r.proveedor_adjudicado })).slice(0, 80) : [];
     const eo = CORE ? ejecOnly(CORE.sgr.rows.filter(inTerr)).slice(0, 80) : [];
+    const entsT = CORE ? (() => { const m = new Map(); for (const r of CORE.rows) { if (!inTerr(r) || !etOk(r)) continue; const k = terrKey(r); const g = m.get(k) || { k, nom: terrName(k, r.nombre_entidad), v: 0 }; g.v += r._v; m.set(k, g); } for (const r of CORE.sgr.rows) { if (!inTerr(r) || r._et !== 'fondo' || !r._ok) continue; const k = sgrTerrKey(r); if (k[0] === 'O') continue; const g = m.get(k) || { k, nom: terrName(k), v: 0 }; g.v += r._v; m.set(k, g); } if (F.ent && !m.has(F.ent)) m.set(F.ent, { k: F.ent, nom: terrName(F.ent), v: 0 }); return [...m.values()].sort((a, b) => b.v - a.v).slice(0, 400); })() : [];
     const names = CORE ? [...new Set([...fonds.map((f) => titleCase(f.nom)), ...CORE.sgr.rows.filter((r) => r._et === 'fondo').map((r) => titleCase(r.entidadejecutora))])].slice(0, 400) : [];
     $('#filters').innerHTML = `
       <label><span>Periodo de firma</span><select id="f_pk">${periodOpts().map(([k, l]) => `<option value="${k}" ${F.pk === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
       <label><span>Departamento</span><select id="f_dept"><option value="">Todos</option>${DEPTS_SORTED.map((d) => `<option value="${d.code}" ${F.dept === d.code ? 'selected' : ''}>${esc(d.name)}</option>`).join('')}</select></label>
       <label><span>Municipio</span><select id="f_muni"><option value="">Todos</option>${muns.map((m) => `<option value="${esc(m)}" ${F.muni === m ? 'selected' : ''}>${esc(munShow(m))}${withRel.has(m) ? '' : ' · sin fondos mixtos'}</option>`).join('')}</select></label>
       <label><span>Quién contrata${tip('tipoent')}</span><select id="f_et">${Object.entries(ET_L).map(([k, l]) => `<option value="${k}" ${F.et === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label><span>Entidad territorial</span><select id="f_ent"><option value="">Todas</option>${entsT.map((e) => `<option value="${esc(e.k)}" ${F.ent === e.k ? 'selected' : ''}>${esc(e.nom)}</option>`).join('')}</select></label>
+      <label><span>Fuente de recursos${tip('fuenterec')}</span><select id="f_fu">${[['all', 'Todas'], ...Object.entries(FU_L)].map(([k, l]) => `<option value="${k}" ${F.fu === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
       <label><span>Mecanismo de gasto${tip('camino')}</span><select id="f_cam">${Object.entries(CAM_L).map(([k, l]) => `<option value="${k}" ${F.cam === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label><span>Modalidad</span><select id="f_mc">${[['all', 'Todas'], ['sin', 'Sin competencia'], ['dir', 'Solo directa'], ['int', 'Solo «interadministrativo»'], ['esp', 'Solo régimen especial'], ['comp', 'Con competencia']].map(([k, l]) => `<option value="${k}" ${F.mc === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-      <label><span>Fondo</span><select id="f_fondo"><option value="">Todos</option>${fonds.map((f) => `<option value="${esc(f.key)}" ${F.fondo === f.key ? 'selected' : ''}>${esc(titleCase(f.nom).slice(0, 60))}</option>`).join('')}${eo.length ? `<optgroup label="Solo ejecutan regalías (sin contratos en SECOP II)">${eo.map((f) => `<option value="${esc(f.key)}" ${F.fondo === f.key ? 'selected' : ''}>${esc(titleCase(f.nom).slice(0, 60))}</option>`).join('')}</optgroup>` : ''}</select></label>
-      <label class="fq"><span>Buscar fondo, entidad, proyecto u objeto</span><span class="fqrow"><input id="f_q" type="search" list="f_qlist" value="${esc(F.q)}" placeholder="Escriba y pulse Buscar…" autocomplete="off"><button type="button" class="btn primary sm" id="f_qgo">Buscar</button>${F.q ? '<button type="button" class="btn sm" id="f_qx">Limpiar</button>' : ''}</span><datalist id="f_qlist">${names.map((n) => `<option value="${esc(n)}"></option>`).join('')}</datalist></label>`;
-    const set = (id, k, reload) => { const el = $(id); el.onchange = () => { F[k] = el.value; if (k === 'dept') F.muni = ''; if (reload) CORE = null; route(); }; };
-    set('#f_pk', 'pk', true); set('#f_dept', 'dept'); set('#f_muni', 'muni'); set('#f_et', 'et'); set('#f_cam', 'cam'); set('#f_mc', 'mc'); set('#f_fondo', 'fondo');
+      <label><span>Fondo</span><select id="f_fondo"><option value="">Todos</option><option value="@foco" ${F.fondo === '@foco' ? 'selected' : ''}>★ FONCOLOMBIA, EDUBAR y GESPRODE</option>${fonds.map((f) => `<option value="${esc(f.key)}" ${F.fondo === f.key ? 'selected' : ''}>${esc(titleCase(f.nom).slice(0, 60))}</option>`).join('')}${eo.length ? `<optgroup label="Solo ejecutan regalías (sin contratos en SECOP II)">${eo.map((f) => `<option value="${esc(f.key)}" ${F.fondo === f.key ? 'selected' : ''}>${esc(titleCase(f.nom).slice(0, 60))}</option>`).join('')}</optgroup>` : ''}</select></label>
+      <label class="fq"><span>Buscar fondo, entidad, proyecto u objeto</span><span class="fqrow"><input id="f_q" type="search" list="f_qlist" value="${esc(F.q)}" placeholder="Escriba y pulse Buscar…" autocomplete="off"><button type="button" class="btn primary sm" id="f_qgo">Buscar</button>${F.q ? '<button type="button" class="btn sm" id="f_qx">Limpiar</button>' : ''}</span><datalist id="f_qlist">${names.map((n) => `<option value="${esc(n)}"></option>`).join('')}</datalist></label>
+      <div class="foco"><span>En foco${tip('foco')}</span>${[...FOCO.map(([k, l]) => [k, l]), ['@foco', 'Los tres juntos']].map(([k, l]) => `<button type="button" data-foco="${k}" aria-pressed="${F.fondo === k}">${k === '@foco' ? '' : '★ '}${esc(l)}</button>`).join('')}${F.fondo ? '<button type="button" data-foco="">Quitar</button>' : ''}${F.ent || F.fu !== 'all' || F.dept || F.fondo || F.q || F.mc !== 'all' ? '<button type="button" data-reset="1">Limpiar filtros</button>' : ''}</div>`;
+    const set = (id, k, reload) => { const el = $(id); el.onchange = () => { F[k] = el.value; if (k === 'dept') { F.muni = ''; F.ent = ''; } if (k === 'muni') F.ent = ''; if (reload) CORE = null; route(); }; };
+    set('#f_pk', 'pk', true); set('#f_dept', 'dept'); set('#f_muni', 'muni'); set('#f_et', 'et'); set('#f_cam', 'cam'); set('#f_mc', 'mc'); set('#f_fondo', 'fondo'); set('#f_ent', 'ent'); set('#f_fu', 'fu');
+    $$('[data-foco]').forEach((b) => { b.onclick = () => { F.fondo = b.dataset.foco; route(); }; });
+    const rs = $('[data-reset]'); if (rs) rs.onclick = () => { Object.assign(F, { dept: '', muni: '', ent: '', fu: 'all', fondo: '', q: '', mc: 'all', cam: 'all' }); CT.prov = ''; route(); };
     const go = () => { F.q = $('#f_q').value.trim(); drawFilters(); route(true); };
     $('#f_qgo').onclick = go; $('#f_q').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } };
     $('#f_q').onchange = go; $('#f_q').onsearch = go;
@@ -758,10 +802,10 @@ td.objeto { min-width: 260px; max-width: 460px; }
     drawStatus();
     const fails = [['SECOP II · contratos por nombre', D.a], ['SECOP II · contratos por NIT', D.b], ['SECOP I', D.s1], ['DNP · regalías', D.sgr]].filter(([, p]) => !p.ok);
     const failBox = fails.length ? `<div class="notice"><b>Consulta incompleta</b><span>No respondieron: ${fails.map(([l, p]) => `${esc(l)}${p.status ? ' (HTTP ' + p.status + ')' : ''}`).join('; ')}. Las cifras pueden estar por debajo de la realidad. <button class="linkbtn" id="retry">Reintentar</button></span></div>` : '';
-    const fn = { panorama: renderPanorama, mapa: renderMapa, relaciones: renderRelaciones, entidades: renderEntidades, fondos: renderFondos, contratos: renderContratos, alertas: renderAlertas, ficha: () => (current ? current.render() : renderPanorama()) }[h] || renderPanorama;
+    const fn = { panorama: renderPanorama, flujo: renderFlujo, contratistas: renderContratistas, mapa: renderMapa, relaciones: renderRelaciones, entidades: renderEntidades, fondos: renderFondos, contratos: renderContratos, alertas: renderAlertas, ficha: () => (current ? current.render() : renderPanorama()) }[h] || renderPanorama;
     if (F.cam === 'A' && h !== 'ficha') await renderCaminoA(failBox); else fn(failBox);
     bindCaminos();
-    const rt = $('#retry'); if (rt) rt.onclick = () => { cache.clear(); CORE = null; route(); };
+    const rt = $('#retry'); if (rt) rt.onclick = () => { cache.clear(); CORE = null; DERIV = null; route(); };
     bindNav(view());
   }
   function bindNav(root) {
@@ -770,7 +814,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
     root.querySelectorAll('[data-dept]').forEach((b) => { b.onclick = () => { F.dept = b.dataset.dept; F.muni = b.dataset.muni || ''; navTo('relaciones'); window.scrollTo({ top: view().offsetTop - 10, behavior: 'smooth' }); }; });
     root.querySelectorAll('[data-go]').forEach((b) => { b.onclick = () => { if (b.dataset.fset) Object.assign(F, JSON.parse(b.dataset.fset)); navTo(b.dataset.go); }; });
   }
-  const head = (eyebrow, title, lead, extra = '') => `<div class="row" style="justify-content:space-between;align-items:flex-end"><div class="stack" style="gap:6px;max-width:78ch"><span class="eyebrow">${eyebrow}</span><h2>${title}</h2>${lead ? `<p class="muted">${lead}</p>` : ''}</div><div class="row">${extra}<button class="btn lime" data-dl>⬇ Descargar esta selección</button></div></div><p class="muted" style="font-size:.8rem">Selección: ${esc(filterLabel())}</p>`;
+  const head = (eyebrow, title, lead, extra = '') => `<div class="row" style="justify-content:space-between;align-items:flex-end"><div class="stack" style="gap:6px;max-width:78ch"><span class="eyebrow">${eyebrow}</span><h2>${title}</h2>${lead ? `<p class="muted">${lead}</p>` : ''}</div><div class="row">${extra}<button class="btn lime" data-xl>⬇ Excel de esta vista</button><button class="btn" data-dl>Más descargas</button></div></div><p class="muted" style="font-size:.8rem">Selección: ${esc(filterLabel())}</p>`;
   function atipBox(sc) {
     return sc.atip.length ? `<div class="notice"><b>${fmtN(sc.atip.length)} contrato(s) con valor atípico${tip('atipico')} ${F.atip ? 'incluidos en' : 'excluidos de'} las cifras</b><span>Suman ${fmtCOP(sum(sc.atip, '_v'))}. Algunos son errores de digitación en SECOP. <button class="linkbtn" id="tatip">${F.atip ? 'Excluirlos' : 'Incluirlos'}</button> · ${sc.atip.slice(0, 3).map((r) => `${esc(r.nombre_entidad)} → ${esc(r.proveedor_adjudicado)}, ${fmtCOP(r._v)}${urlOf(r.urlproceso) ? ` <a href="${esc(urlOf(r.urlproceso))}" target="_blank" rel="noopener">SECOP ↗</a>` : ''}`).join('; ')}${sc.atip.length > 3 ? '…' : ''}</span></div>` : '';
   }
@@ -796,42 +840,41 @@ td.objeto { min-width: 260px; max-width: 460px; }
     return out;
   }
   function renderPanorama(failBox = '') {
-    const sc = scope(); const R = sc.rows; const tot = sum(R, '_v'); const sinV = sum(R.filter((r) => SIN.has(r._m)), '_v'); const intV = sum(R.filter((r) => r._m === 'int'), '_v');
-    const ents = groupBy(R, (r) => r.nit_entidad || r.nombre_entidad, (r) => ({ nom: r.nombre_entidad, nit: r.nit_entidad, t: r._t }));
+    const sc = scope(); const R = sc.rows; const tot = sum(R, '_v'); const sinV = sum(R.filter((r) => SIN.has(r._m)), '_v');
+    const ents = groupBy(R, (r) => terrKey(r), (r) => ({ nom: terrName(terrKey(r), r.nombre_entidad) }));
     const fondos = groupBy(R, (r) => r._fk, (r) => ({ nom: r.proveedor_adjudicado, doc: r.documento_proveedor }));
     const years = groupBy(R, (r) => r._y || 'Sin fecha', (r) => ({ y: r._y || 'Sin fecha' })).sort((a, b) => String(a.y).localeCompare(String(b.y)));
-    const deps = groupBy(R, (r) => r._dep || 'ND', (r) => ({ code: r._dep }));
-    const sg = sc.sgr.filter((r) => r._ok); const ins = insights(sc);
-    const maxY = Math.max(1, ...years.map((y) => y.v));
-    view().innerHTML = `<div class="stack">${head('Panorama', 'Quién les contrata, cómo y cuánto', '')}${failBox}${atipBox(sc)}
+    const sg = sc.sgr.filter((r) => r._ok && r._et === 'fondo'); const sgV = sum(sg, '_v'); const ins = insights(sc);
+    const maxY = Math.max(1, ...years.map((y) => y.v)); const alN = R.filter((r) => r._al.length).length;
+    const fu = FU_ORDER.map((k) => { const rr = R.filter((r) => r._fuk === k); return { k, v: sum(rr, '_v'), n: rr.length }; }); const maxF = Math.max(1, sgV, ...fu.map((x) => x.v));
+    const fuBar = (l, v, n, c, attrs = '') => barRow(l, [[v, '']], maxF, `${fmtCOP(v)} · ${fmtN(n)}`, attrs).replace('background:var(--violet)', 'background:' + c);
+    view().innerHTML = `<div class="stack">${head('Panorama', 'Qué plata pública pasa por los fondos, de dónde sale y a quién llega', 'Contratos de alcaldías y gobernaciones con fondos (todas las fuentes de recursos), proyectos de regalías con un fondo como ejecutor y lo que los fondos contrataron después.')}${failBox}${atipBox(sc)}
       <div class="kpis">
-        <div class="kpi"><span class="l">Recibido por fondos${tip('fondo')}</span><span class="v" title="${fullCOP(tot)}">${fmtCOP(tot)}</span><span class="s">${fmtN(R.length)} contratos · SECOP II</span></div>
+        <div class="kpi"><span class="l">Entregado a fondos por contrato${tip('fondo')}</span><span class="v" title="${fullCOP(tot)}">${fmtCOP(tot)}</span><span class="s">${fmtN(R.length)} contratos · todas las fuentes</span></div>
+        <div class="kpi"><span class="l">Regalías con fondo ejecutor${tip('ejecutor')}</span><span class="v">${fmtCOP(sgV)}</span><span class="s">${fmtN(sg.length)} proyectos · DNP</span></div>
         <div class="kpi"><span class="l">Sin competencia${tip('sin')}</span><span class="v">${fmtPct(tot ? sinV / tot : 0)}</span><span class="s">${fmtCOP(sinV)}</span></div>
-        <div class="kpi"><span class="l">«Interadministrativo»${tip('int')}</span><span class="v">${fmtCOP(intV)}</span><span class="s">figura entre entidades públicas</span></div>
-        <div class="kpi"><span class="l">Entidades${tip('tipoent')}</span><span class="v">${fmtN(ents.length)}</span><span class="s">${fmtN(ents.filter((e) => e.t === 'alc').length)} municipales · ${fmtN(ents.filter((e) => e.t === 'gob').length)} departamentales</span></div>
-        <div class="kpi"><span class="l">Fondos con contratos</span><span class="v">${fmtN(fondos.length)}</span><span class="s">${fmtN(new Set(R.map((r) => r._mun).filter(Boolean)).size)} municipios</span></div>
-        <div class="kpi"><span class="l">Regalías ejecutadas por fondos${tip('ejecutor')}</span><span class="v">${fmtCOP(sum(sg, '_v'))}</span><span class="s">${fmtN(sg.length)} proyectos · DNP</span></div>
+        <div class="kpi"><span class="l">Entidades territoriales</span><span class="v">${fmtN(ents.length)}</span><span class="s">secretarías agrupadas</span></div>
+        <div class="kpi"><span class="l">Fondos</span><span class="v">${fmtN(new Set([...fondos.map((f) => f.key), ...sg.map((r) => sgrEk(r))]).size)}</span><span class="s">con contratos o como ejecutores</span></div>
       </div>
-      ${F.cam === 'all' ? caminosCard(sc) : ''}
-      ${!R.length ? (sg.length ? `<div class="notice info"><b>Sin contratos en SECOP II, pero con regalías ejecutadas por fondos mixtos${tip('ejecutor')}</b><span>Ninguna entidad con sede en ${esc(sc.label)} registra contratos con fondos mixtos en SECOP II para esta selección. Aun así, el DNP registra ${fmtN(sg.length)} proyecto(s) de regalías de este territorio, por ${fmtCOP(sum(sg, '_v'))}, con un fondo mixto como entidad ejecutora. En esa figura el fondo no aparece como contratista de la entidad territorial, sino como ejecutor del proyecto: recibe los recursos de regalías y escoge por su cuenta a los contratistas, y esos contratos no quedan en SECOP II. El Consejo de Estado conceptuó en junio de 2026 (Sala de Consulta, radicado 2563) que todo ejecutor de regalías debe aplicar el estatuto de contratación pública. Los proyectos están abajo; lo que el fondo contrató se ve en su ficha, pestaña «Convocatorias y contratación propia», solo si lo publicó en SECOP II.</span></div>` : `<div class="notice info"><b>${esc(sc.label)}: sin relación registrada con fondos mixtos</b><span>Para esta selección no hay contratos con fondos mixtos en SECOP II ni proyectos de regalías con un fondo mixto como ejecutor. Es un resultado, no un error: las entidades de este territorio contratan sus regalías por otras vías. ${F.q ? 'Revise también que el texto buscado esté bien escrito o pruebe con una sola palabra del nombre. ' : ''}Puede ampliar el periodo o ver cómo se contratan aquí las regalías de todo origen.</span>${F.dept ? '<button class="btn sm" id="pan_goreg" style="width:fit-content">Ver las regalías de este territorio →</button>' : ''}</div>`) : `
-      <div class="card"><h3>Lo que muestran los datos</h3><ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">${ins.map((t) => `<li>${t}</li>`).join('')}</ul></div>
+      ${!R.length && !sg.length ? `<div class="notice info"><b>${esc(sc.label)}: sin relación registrada con fondos mixtos</b><span>Para esta selección no hay contratos con fondos ni proyectos de regalías con un fondo como ejecutor. Es un resultado, no un error. ${F.q ? 'Revise el texto buscado o pruebe con una sola palabra. ' : ''}Pruebe ampliar el periodo o quitar filtros.</span></div>` : `
+      ${ins.length ? `<div class="card"><h3>Lo que muestran los datos</h3><ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">${ins.map((t) => `<li>${t}</li>`).join('')}</ul></div>` : ''}
+      <div class="card"><div class="row" style="justify-content:space-between"><h3>Flujo: entidad → fondo → contratista</h3><button class="btn sm" data-go="flujo">Ver completo →</button></div><div id="pfl"><p class="loading">Consultando lo que contrataron los fondos…</p></div></div>
       <div class="grid2">
-        <div class="card"><h3>Por año y modalidad</h3>${modLegend()}<div class="bars">${years.map((y) => barRow(String(y.y), modParts(y.by), maxY, `${fmtCOP(y.v)} · ${fmtN(y.n)}`)).join('')}</div></div>
-        <div class="card"><h3>Por departamento</h3><div class="bars">${deps.slice(0, 14).map((d) => barRow(d.code ? deptName(d.code) : 'Sin departamento', modParts(d.by), deps[0].v, fmtCOP(d.v), d.code ? `data-dept="${d.code}"` : '')).join('')}</div><p class="muted" style="font-size:.78rem">Toque un departamento para rastrear sus municipios y fondos.</p></div>
+        <div class="card"><h3>Por fuente de recursos${tip('fuenterec')}</h3><div class="bars">${fu.map((x) => fuBar(FU_L[x.k], x.v, x.n, FU_C[x.k], `data-setfu="${x.k}"`)).join('')}${fuBar('Regalías con fondo ejecutor (DNP)', sgV, sg.length, FU_C.sgr)}</div><p class="muted" style="font-size:.78rem">Toque una fuente para filtrar. La fuente es la que la entidad declaró en SECOP II; SECOP I no la informa.</p></div>
+        <div class="card"><h3>Por año y modalidad</h3>${modLegend()}<div class="bars">${years.map((y) => barRow(String(y.y), modParts(y.by), maxY, `${fmtCOP(y.v)} · ${fmtN(y.n)}`)).join('') || '<p class="muted">Sin contratos.</p>'}</div></div>
       </div>
       <div class="grid2">
-        <div class="card"><h3>Entidades que más contratan con fondos</h3><div class="bars">${ents.slice(0, 12).map((e) => barRow(e.nom, modParts(e.by), ents[0].v, fmtCOP(e.v), `data-ent="${esc(e.key)}" data-name="${esc(e.nom)}"`)).join('')}</div><button class="btn sm" data-go="entidades" style="width:fit-content">Ver las ${fmtN(ents.length)} entidades →</button></div>
-        <div class="card"><h3>Fondos que más reciben</h3><div class="bars">${fondos.slice(0, 12).map((f) => barRow(f.nom, modParts(f.by), fondos[0].v, fmtCOP(f.v), `data-fondo="${esc(f.key)}" data-name="${esc(f.nom)}"`)).join('')}</div><button class="btn sm" data-go="fondos" style="width:fit-content">Ver los ${fmtN(fondos.length)} fondos →</button></div>
+        <div class="card"><h3>Entidades territoriales que más entregan</h3><div class="bars">${ents.slice(0, 12).map((e) => barRow(e.nom, modParts(e.by), ents[0].v, fmtCOP(e.v), `data-setent="${esc(e.key)}"`)).join('') || '<p class="muted">Sin contratos.</p>'}</div><p class="muted" style="font-size:.78rem">Toque una entidad para filtrar todo por ella.</p></div>
+        <div class="card"><h3>Fondos que más reciben</h3><div class="bars">${fondos.slice(0, 12).map((f) => barRow((FOCO.some((x) => x[0] === f.key) ? '★ ' : '') + f.nom, modParts(f.by), fondos[0].v, fmtCOP(f.v), `data-fondo="${esc(f.key)}" data-name="${esc(f.nom)}"`)).join('') || '<p class="muted">Sin contratos.</p>'}</div><button class="btn sm" data-go="fondos" style="width:fit-content">Ver los ${fmtN(fondos.length)} fondos →</button></div>
       </div>
-      <div class="card"><h3>Flujo de recursos: entidad → fondo${tip('relacion')}</h3><div id="flow"></div><p class="muted" style="font-size:.78rem">El grosor de cada línea es proporcional al valor contratado. Toque una entidad o un fondo para abrir su ficha.</p></div>`}
-      ${sc.sgr.length ? `<div class="card"><h3>Proyectos de regalías ejecutados por fondos mixtos${tip('ejecutor')}</h3><p class="muted" style="font-size:.85rem">Proyectos aprobados para ${esc(sc.label)} en los que un fondo mixto es la entidad ejecutora. Toque el nombre del fondo para abrir su ficha.</p><div id="pansgr"></div>${qlink(sc.D.sgr)}</div>` : ''}
+      <div class="row">${alN ? `<button class="btn" data-go="alertas">Ver ${fmtN(alN)} contratos con alertas →</button>` : ''}<button class="btn" data-go="contratistas">¿Con quién contratan los fondos? →</button></div>`}
+      ${F.cam === 'all' ? `<details><summary class="muted" style="cursor:pointer">Cómo se gastan las regalías: caminos A, B y C</summary>${caminosCard(sc)}</details>` : ''}
       ${qlink(sc.D.a)}</div>`;
-    if (R.length) flowChart($('#flow'), R);
-    if ($('#pansgr')) sgrTable($('#pansgr'), sc.sgr, {});
-    const pg = $('#pan_goreg'); if (pg) pg.onclick = () => { RG.dept = F.dept; RG.muni = F.muni; RG.D = null; navTo('regalias'); };
+    view().querySelectorAll('[data-setent]').forEach((b) => { b.onclick = () => { F.ent = b.dataset.setent; route(); }; });
+    view().querySelectorAll('[data-setfu]').forEach((b) => { b.onclick = () => { F.fu = b.dataset.setfu; route(); }; });
     bindAtip();
+    if ($('#pfl')) ensureDeriv().then(() => { if (stillOn('panorama') && $('#pfl')) { const ds = dscope(sc); flow3($('#pfl'), sc, ds, { maxL: 8, maxM: 8, maxR: 10 }); } }).catch((e) => { if ($('#pfl')) $('#pfl').innerHTML = `<p class="muted">No fue posible consultar la contratación de los fondos: ${esc(e.message)}</p>`; });
   }
-
   // Diagrama bipartito entidad -> fondo
   function flowChart(el, rows, maxN = 10) {
     const E = groupBy(rows, (r) => r.nit_entidad || r.nombre_entidad, (r) => ({ nom: r.nombre_entidad })).slice(0, maxN);
@@ -1746,16 +1789,218 @@ td.objeto { min-width: 260px; max-width: 460px; }
     if (btn) { btn.disabled = false; btn.textContent = lab; }
   }
 
+  // ---------------------------------------------------------------- Contratación de los fondos: a quién le pasan la plata (SECOP I, SECOP II contratos y procesos)
+  let DERIV = null, derivLoading = null;
+  const CT = { prov: '', tipo: 'all' };
+  const DV_NAME = ['FONDO MIXTO', 'FONCOLOMBIA', 'GESPRODE', 'FONPACIFICO', 'EDUBAR'];
+  const normRef = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const NOPROV = /^(NO DEFINIDO|NO ADJUDICADO|N\/?A|SIN DEFINIR|)$/i;
+  const DV_KIND = { c: 'Contrato firmado', pp: 'Proceso con contratista informado', p0: 'Proceso sin contratista publicado' };
+  const dvKind = (o) => (o.kind === 'c' ? 'c' : o.prov ? 'pp' : 'p0');
+  const isFoco = (k) => FOCO.some((x) => x[0] === k);
+  const shortF = (k, nom) => { const f = FOCO.find((x) => x[0] === k); if (f) return f[1]; const sd = SEEDS.find((x) => x[0] === k); return sd ? sd[1] : titleCase(String(nom || k).replace(/^FONDO MIXTO (DE |PARA (LA |EL )?)?/i, 'F. M. ')); };
+  async function loadDeriv(P) {
+    const nits = fondoNits().flatMap(docVariants).map(sqlStr).join(',');
+    const like = (f) => DV_NAME.map((w) => `upper(${f}) like '%${w}%'`).join(' OR ');
+    const PSEL = 'entidad,nit_entidad,departamento_entidad,id_del_proceso,referencia_del_proceso,nombre_del_procedimiento,descripci_n_del_procedimiento,fecha_de_publicacion_del,precio_base,modalidad_de_contratacion,respuestas_al_procedimiento,adjudicado,valor_total_adjudicacion,nombre_del_proveedor,nit_del_proveedor_adjudicado,urlproceso,estado_resumen';
+    const [ct, pr] = await Promise.all([
+      part('integrado', { select: S1_SEL + ',origen,numero_de_proceso', where: `(${like('nombre_de_la_entidad')} OR nit_de_la_entidad in (${nits})) AND ${periodWhere('fecha_de_firma_del_contrato', P)}`, limit: 60000 }),
+      part('procesos', { select: PSEL, where: `(${like('entidad')} OR nit_entidad in (${nits})) AND ${periodWhere('fecha_de_publicacion_del', P)}`, limit: 60000 }),
+    ]);
+    const rows = []; const refs = new Set(); const seen = new Set(); const nameKey = new Map();
+    const dv = (o) => {
+      o._m = modClass(o.mod, ''); o._y = yr(o.f); const T = segTerr(o.obj);
+      if (T.dep) { o._dep = T.dep; o._mun = T.mun; o._ts = 'texto'; } else { const d = deptOf(o.sede); o._dep = d ? d.code : ''; o._mun = ''; o._ts = o._dep ? 'sede' : ''; }
+      o.pk = o.prov ? nitBase(o.pdoc) || clean(o.prov) : ''; nameKey.set(clean(o.fnom), o.k); return o;
+    };
+    for (const x of ct.rows) {
+      const ent = String(x.nombre_de_la_entidad || '').replace(/^[^-]{3,40} - /, '');
+      if (!isFondo(ent, x.nit_de_la_entidad)) continue;
+      const k = nitBase(x.nit_de_la_entidad) || clean(ent); const sis = x.origen === 'SECOPII' ? 'SECOP II' : 'SECOP I'; const id = String(x.numero_del_contrato || '');
+      if (seen.has(sis + id + k)) continue; seen.add(sis + id + k); if (x.numero_de_proceso) refs.add(k + '|' + normRef(x.numero_de_proceso));
+      const prov = NOPROV.test(String(x.nom_raz_social_contratista || '').trim()) ? '' : x.nom_raz_social_contratista;
+      rows.push(dv({ k, fnom: ent, sede: x.departamento_entidad, prov, pdoc: x.documento_proveedor, obj: x.objeto_a_contratar || '', v: num(x.valor_contrato), f: x.fecha_de_firma_del_contrato, mod: x.modalidad_de_contrataci_n, est: x.estado_del_proceso, kind: 'c', sis, id, ref: x.numero_de_proceso || '', url: urlOf(x.url_contrato), ofer: '' }));
+    }
+    for (const x of pr.rows) {
+      if (!isFondo(x.entidad, x.nit_entidad)) continue;
+      const k = nitBase(x.nit_entidad) || clean(x.entidad); if (refs.has(k + '|' + normRef(x.referencia_del_proceso))) continue;
+      if (seen.has('P' + x.id_del_proceso)) continue; seen.add('P' + x.id_del_proceso);
+      const prov = NOPROV.test(String(x.nombre_del_proveedor || '').trim()) ? '' : x.nombre_del_proveedor;
+      const a = String(x.nombre_del_procedimiento || '').trim(), b = String(x.descripci_n_del_procedimiento || '').trim();
+      rows.push(dv({ k, fnom: x.entidad, sede: x.departamento_entidad, prov, pdoc: NOPROV.test(String(x.nit_del_proveedor_adjudicado || '').trim()) ? '' : x.nit_del_proveedor_adjudicado, obj: clean(b).startsWith(clean(a)) ? b : [a, b].filter(Boolean).join('. '), v: num(x.valor_total_adjudicacion) || num(x.precio_base), f: x.fecha_de_publicacion_del, mod: x.modalidad_de_contratacion, est: x.estado_resumen, kind: 'p', sis: 'SECOP II', id: x.id_del_proceso, ref: x.referencia_del_proceso || '', url: urlOf(x.urlproceso), ofer: x.respuestas_al_procedimiento != null ? num(x.respuestas_al_procedimiento) : '', adj: x.adjudicado }));
+    }
+    return { P, ct, pr, rows, nameKey, at: new Date() };
+  }
+  async function ensureDeriv() {
+    const P = getPeriod(F.pk);
+    if (DERIV && DERIV.P.k === P.k) return DERIV;
+    if (!derivLoading || derivLoading.k !== P.k) derivLoading = { k: P.k, p: loadDeriv(P) };
+    const d = await derivLoading.p; if (derivLoading && derivLoading.k === P.k) { DERIV = d; derivLoading = null; }
+    return d;
+  }
+  // Une la clave de un fondo (NIT o nombre) con la que usa su propia contratación
+  function dvKey(k, name) {
+    if (/^\d{6,}$/.test(k) || !DERIV) return k;
+    const c = clean(name || k); if (DERIV.nameKey.has(c)) return DERIV.nameKey.get(c);
+    const m = ejecMatch(name || k, [...DERIV.nameKey.keys()]); return m.length === 1 ? DERIV.nameKey.get(m[0]) : k;
+  }
+  const mcOk = (o) => F.mc === 'all' || (F.mc === 'sin' ? o._m !== 'comp' : F.mc === 'int' || F.mc === 'dir' ? o._m === 'dir' || o._m === 'int' : o._m === F.mc);
+  function terrTarget() {
+    let dep = F.dept, mun = F.muni;
+    if (F.ent) { const [t, d, m] = F.ent.split('|'); if (t === 'A') { dep = d; mun = m; } else if (t === 'G') { dep = d; mun = ''; } }
+    return { dep, mun, on: !!(dep || mun) };
+  }
+  // Contratación de los fondos que corresponden a la selección
+  function dscope(sc, opts = {}) {
+    if (!DERIV) return { rows: [], funds: new Set(), terr: terrTarget() };
+    const funds = new Set([...sc.rows.map((r) => dvKey(r._fk, r.proveedor_adjudicado)), ...sc.sgr.filter((r) => r._et === 'fondo').map((r) => dvKey(sgrEk(r), r.entidadejecutora))]);
+    const T = terrTarget(); const terrOn = T.on && F.dterr; const qn = clean(F.q);
+    const rows = DERIV.rows.filter((o) => (F.fondo ? fondoSel(o.k) : funds.has(o.k)) && (!terrOn || (T.mun ? o._mun === T.mun && o._dep === T.dep : o._dep === T.dep)) && mcOk(o) && (opts.noQ || !qn || clean(`${o.fnom} ${o.prov} ${o.obj} ${o.id} ${o.ref}`).includes(qn)));
+    return { rows, funds, terr: T, terrOn };
+  }
+  const derivFailBox = () => { if (!DERIV) return ''; const f = [['contratos de los fondos (SECOP I y II)', DERIV.ct], ['procesos de los fondos (SECOP II)', DERIV.pr]].filter(([, p]) => !p.ok); return f.length ? `<div class="notice"><b>Consulta incompleta</b><span>No respondieron: ${f.map(([l]) => l).join('; ')}. <button class="linkbtn" id="dv_retry">Reintentar</button></span></div>` : ''; };
+  const bindDvRetry = () => { const b = $('#dv_retry'); if (b) b.onclick = () => { cache.clear(); DERIV = null; route(); }; };
+  function terrToggle(ds) {
+    if (!ds.terr.on) return '';
+    const lugar = ds.terr.mun ? munShow(ds.terr.mun) : deptName(ds.terr.dep);
+    return `<div class="chips" style="align-items:center"><span class="muted" style="font-size:.82rem">Contratación de los fondos:</span><button class="btn sm ${F.dterr ? 'primary' : ''}" data-dterr="1">Solo la que menciona ${esc(lugar)}</button><button class="btn sm ${F.dterr ? '' : 'primary'}" data-dterr="0">Toda la de estos fondos</button>${tip('derivado')}</div>`;
+  }
+  const bindTerrToggle = () => $$('[data-dterr]').forEach((b) => { b.onclick = () => { F.dterr = b.dataset.dterr === '1'; route(true); }; });
+
+  // ---------------------------------------------------------------- Diagrama de tres columnas: entidad → fondo → contratista
+  const FU_ORDER = ['sgr', 'prop', 'otras', 'nd'];
+  const DV_MC = [['esp', 'Régimen especial', 'var(--c-esp)'], ['dir', 'Contratación directa', 'var(--c-dir)'], ['comp', 'Con competencia', 'var(--c-comp)']];
+  const dvColor = (m) => (m === 'esp' ? 'var(--c-esp)' : m === 'comp' ? 'var(--c-comp)' : 'var(--c-dir)');
+  function flow3Data(sc, ds, maxL = 10, maxM = 10, maxR = 12) {
+    const M = new Map(); const lm = new Map(); const L = new Map();
+    const fname = new Map();
+    const addLM = (lk, lnom, fk, fnom, v, fu, kind) => {
+      if (!(v > 0)) return; fname.set(fk, fname.get(fk) || fnom);
+      const l = L.get(lk) || { key: lk, nom: lnom, v: 0 }; l.v += v; L.set(lk, l);
+      const m = M.get(fk) || { key: fk, nom: fnom, vin: 0, vout: 0 }; m.vin += v; M.set(fk, m);
+      const k = lk + '→' + fk + '→' + fu + kind; const x = lm.get(k) || { a: lk, b: fk, v: 0, fu, kind, n: 0 }; x.v += v; x.n++; lm.set(k, x);
+    };
+    for (const r of sc.rows) addLM(terrKey(r), terrName(terrKey(r), r.nombre_entidad), dvKey(r._fk, r.proveedor_adjudicado), r.proveedor_adjudicado, r._v, r._fuk, 'B');
+    for (const r of sc.sgr) if (r._ok && r._et === 'fondo') { const lk = sgrTerrKey(r); addLM(lk, lk[0] === 'O' ? titleCase(r.nomocad || '') : terrName(lk), dvKey(sgrEk(r), r.entidadejecutora), r.entidadejecutora, r._v, 'sgr', 'C'); }
+    // A la derecha entran también los fondos elegidos que no recibieron nada en la selección
+    for (const o of ds.rows) if (!M.has(o.k)) M.set(o.k, { key: o.k, nom: o.fnom, vin: 0, vout: 0 });
+    for (const o of ds.rows) M.get(o.k).vout += o.v;
+    const Ms = [...M.values()].sort((a, b) => (b.vin + b.vout * 0.001) - (a.vin + a.vout * 0.001)).slice(0, maxM); const mk = new Set(Ms.map((m) => m.key));
+    const Ls0 = [...L.values()].filter((l) => [...lm.values()].some((x) => x.a === l.key && mk.has(x.b))).sort((a, b) => b.v - a.v);
+    const Ls = Ls0.slice(0, maxL); const lOther = Ls0.slice(maxL); const lk = new Set(Ls.map((l) => l.key));
+    if (lOther.length) Ls.push({ key: '__otras', nom: `Otras ${fmtN(lOther.length)} entidades`, v: sum(lOther, 'v'), other: true });
+    const LM = new Map(); for (const x of lm.values()) { if (!mk.has(x.b)) continue; const a = lk.has(x.a) ? x.a : '__otras'; const k = a + '→' + x.b + '→' + x.fu + x.kind; const y = LM.get(k) || { ...x, a, v: 0, n: 0 }; y.v += x.v; y.n += x.n; LM.set(k, y); }
+    const R = new Map(); const mr = new Map();
+    for (const o of ds.rows) { if (!mk.has(o.k)) continue; const rk = o.pk || '__sin'; const r = R.get(rk) || { key: rk, nom: o.prov || 'Sin contratista publicado', v: 0, n: 0, funds: new Set() }; r.v += o.v; r.n++; r.funds.add(o.k); R.set(rk, r); }
+    const Rs0 = [...R.values()].filter((r) => r.key !== '__sin').sort((a, b) => b.v - a.v); const sinR = R.get('__sin');
+    const Rs = Rs0.slice(0, maxR); const rOther = Rs0.slice(maxR); const rk = new Set(Rs.map((r) => r.key));
+    if (rOther.length) Rs.push({ key: '__otros', nom: `Otros ${fmtN(rOther.length)} contratistas`, v: sum(rOther, 'v'), n: sum(rOther, 'n'), other: true });
+    if (sinR) Rs.push({ ...sinR, sin: true });
+    for (const o of ds.rows) { if (!mk.has(o.k)) continue; const r = o.pk ? (rk.has(o.pk) ? o.pk : '__otros') : '__sin'; const mm = o._m === 'int' ? 'dir' : o._m; const k = o.k + '→' + r + '→' + mm; const y = mr.get(k) || { a: o.k, b: r, m: mm, v: 0, n: 0 }; y.v += o.v; y.n++; mr.set(k, y); }
+    return { Ls, Ms, Rs, LM: [...LM.values()], MR: [...mr.values()], fname };
+  }
+  function flow3(el, sc, ds, opts = {}) {
+    const X = flow3Data(sc, ds, opts.maxL || 10, opts.maxM || 10, opts.maxR || 12);
+    if (!X.Ms.length) { el.innerHTML = '<p class="muted">Sin relaciones para dibujar en esta selección.</p>'; return; }
+    const W = 1200, nw = 12, x1 = 290, x2 = 545, x3 = 915, rowH = 32;
+    const n = Math.max(X.Ls.length, X.Ms.length, X.Rs.length, 3); const H = n * rowH + 24;
+    const yOf = (arr, i) => 12 + (i + 0.5) * ((H - 24) / arr.length);
+    const iL = new Map(X.Ls.map((l, i) => [l.key, i])), iM = new Map(X.Ms.map((m, i) => [m.key, i])), iR = new Map(X.Rs.map((r, i) => [r.key, i]));
+    const maxA = Math.max(1, ...X.LM.map((x) => x.v)), maxB = Math.max(1, ...X.MR.map((x) => x.v));
+    const cut = (s, k) => { s = titleCase(String(s || '')); return s.length > k ? s.slice(0, k - 1) + '…' : s; };
+    const curve = (xa, ya, xb, yb) => `M${xa} ${ya} C ${(xa + xb) / 2} ${ya}, ${(xa + xb) / 2} ${yb}, ${xb} ${yb}`;
+    const fnm = (k) => (X.Ms[iM.get(k)] || {}).nom || k;
+    const linksA = X.LM.filter((x) => iL.has(x.a) && iM.has(x.b)).sort((a, b) => b.v - a.v).map((x) => { const ya = yOf(X.Ls, iL.get(x.a)), yb = yOf(X.Ms, iM.get(x.b)); const w = Math.max(1.2, 18 * Math.sqrt(x.v / maxA)); return `<path class="lk" d="${curve(x1 + nw, ya, x2, yb)}" stroke="${FU_C[x.fu]}" stroke-width="${w}" ${x.kind === 'C' ? 'stroke-dasharray="7 4"' : ''}><title>${esc(X.Ls[iL.get(x.a)].nom)} → ${esc(titleCase(fnm(x.b)))}\n${x.kind === 'C' ? 'Fondo ejecutor de regalías (DNP)' : FU_L[x.fu]}: ${fullCOP(x.v)} · ${fmtN(x.n)} ${x.kind === 'C' ? 'proyecto(s)' : 'contrato(s)'}</title></path>`; }).join('');
+    const linksB = X.MR.filter((x) => iM.has(x.a) && iR.has(x.b)).sort((a, b) => b.v - a.v).map((x) => { const ya = yOf(X.Ms, iM.get(x.a)), yb = yOf(X.Rs, iR.get(x.b)); const w = Math.max(1.2, 18 * Math.sqrt(x.v / maxB)); const r = X.Rs[iR.get(x.b)]; return `<path class="lk" d="${curve(x2 + nw, ya, x3, yb)}" stroke="${dvColor(x.m)}" stroke-width="${w}" ${r.sin ? 'stroke-dasharray="2 3"' : ''}><title>${esc(titleCase(fnm(x.a)))} → ${esc(titleCase(r.nom))}\n${esc((DV_MC.find((d) => d[0] === x.m) || DV_MC[1])[1])}: ${fullCOP(x.v)} · ${fmtN(x.n)} registro(s)</title></path>`; }).join('');
+    const nodeL = X.Ls.map((l, i) => `<g class="nd" ${l.other ? '' : `data-fent="${esc(l.key)}"`}><rect x="${x1}" y="${yOf(X.Ls, i) - 10}" width="${nw}" height="20" rx="3" fill="${l.other ? 'var(--muted)' : 'var(--blue)'}"><title>${esc(l.nom)}: ${fullCOP(l.v)}</title></rect><text x="${x1 - 8}" y="${yOf(X.Ls, i) + 4}" text-anchor="end">${esc(cut(l.nom, 40))}</text></g>`).join('');
+    const nodeM = X.Ms.map((m, i) => { const f = isFoco(m.key); return `<g class="nd" data-ffondo="${esc(m.key)}"><rect x="${x2}" y="${yOf(X.Ms, i) - 11}" width="${nw}" height="22" rx="3" fill="var(--violet)" ${f ? 'stroke="var(--ink)" stroke-width="2"' : ''}><title>${esc(m.nom)}${NO_FM.has(m.key) ? ' (empresa pública, no es fondo mixto)' : ''}\nRecibe en la selección: ${fullCOP(m.vin)}\nPublicó como contratante: ${fullCOP(m.vout)}</title></rect><text class="halo" x="${x2 + nw + 6}" y="${yOf(X.Ms, i) + 4}" ${f ? 'font-weight="800"' : ''}>${f ? '★ ' : ''}${esc(cut(shortF(m.key, m.nom), 44))}</text></g>`; }).join('');
+    const nodeR = X.Rs.map((r, i) => `<g class="nd" ${r.other || r.sin ? '' : `data-fprov="${esc(r.key)}"`}><rect x="${x3}" y="${yOf(X.Rs, i) - 10}" width="${nw}" height="20" rx="3" fill="${r.sin ? 'var(--coral)' : r.other ? 'var(--muted)' : 'var(--ok)'}"><title>${esc(r.nom)}: ${fullCOP(r.v)} · ${fmtN(r.n)} registro(s)</title></rect><text x="${x3 + nw + 8}" y="${yOf(X.Rs, i) + 4}" ${r.sin ? 'font-weight="700"' : ''}>${esc(cut(r.nom, 36))}</text></g>`).join('');
+    const hdr = (x, t, anchor) => `<text x="${x}" y="0" class="colh" text-anchor="${anchor}">${t}</text>`;
+    el.innerHTML = `<div style="overflow-x:auto"><svg class="flow flow3" viewBox="0 -22 ${W} ${H + 22}" style="min-width:860px" role="img" aria-label="Flujo de recursos: entidad, fondo y contratista">
+      ${hdr(x1 + nw, 'ENTIDAD QUE ENTREGA', 'end')}${hdr(x2, 'FONDO', 'start')}${hdr(x3, 'CONTRATISTA DEL FONDO', 'start')}
+      ${linksA}${linksB}${nodeL}${nodeM}${nodeR}</svg></div>
+      <div class="legend" style="margin-top:6px"><b style="font-size:.78rem">Entidad → fondo, por fuente${tip('fuenterec')}</b>${FU_ORDER.map((k) => `<span><i style="background:${FU_C[k]}"></i>${esc(FU_L[k])}</span>`).join('')}<span><i class="dash"></i>Fondo ejecutor de regalías (DNP)${tip('ejecutor')}</span></div>
+      <div class="legend"><b style="font-size:.78rem">Fondo → contratista, por modalidad${tip('derivado')}</b>${DV_MC.map(([, l, c]) => `<span><i style="background:${c}"></i>${esc(l)}</span>`).join('')}<span><i style="background:var(--coral)"></i>Sin contratista publicado${tip('sincontr')}</span></div>
+      <p class="muted" style="font-size:.76rem">El grosor compara valores dentro de cada lado: a la izquierda, lo que las entidades entregaron; a la derecha, lo que los fondos publicaron como contratantes (valor del contrato, o precio base si el proceso no tiene contrato). Toque una entidad o un fondo para filtrar; toque un contratista para ver sus contratos.${ds.terrOn ? ' A la derecha solo entra la contratación cuyo objeto menciona el territorio elegido (o, si no menciona ninguno, la del fondo con sede allí).' : ''}</p>`;
+    el.querySelectorAll('[data-fent]').forEach((g) => { g.style.cursor = 'pointer'; g.onclick = () => { F.ent = g.dataset.fent; route(); }; });
+    el.querySelectorAll('[data-ffondo]').forEach((g) => { g.style.cursor = 'pointer'; g.onclick = () => { F.fondo = g.dataset.ffondo; route(); }; });
+    el.querySelectorAll('[data-fprov]').forEach((g) => { g.style.cursor = 'pointer'; g.onclick = () => { CT.prov = g.dataset.fprov; CT.tipo = 'all'; navTo('contratistas'); }; });
+  }
+
+  // ---------------------------------------------------------------- Vista: flujo de recursos
+  const stillOn = (h) => ((location.hash || '#panorama').slice(1).split('/')[0] || 'panorama') === h;
+  async function renderFlujo(failBox = '') {
+    const sc = scope();
+    view().innerHTML = `<div class="stack">${head('Flujo de recursos', 'Quién le entrega plata a cada fondo y a quién se la pasa el fondo', 'Izquierda: alcaldías y gobernaciones, con sus secretarías agrupadas. Centro: los fondos. Derecha: a quién contrataron los fondos, según lo que ellos mismos publicaron en SECOP I y II. Incluye todas las fuentes de recursos, no solo regalías.')}${failBox}${atipBox(sc)}<div class="card" id="fl3box"><p class="loading">Consultando lo que publicaron los fondos en SECOP I y II…</p></div><div class="grid2" id="flsum"></div></div>`;
+    bindAtip();
+    try { await ensureDeriv(); } catch (e) { $('#fl3box').innerHTML = `<div class="notice"><b>No fue posible consultar la contratación de los fondos</b><span>${esc(e.message)}</span></div>`; return; }
+    if (!stillOn('flujo')) return;
+    const ds = dscope(sc);
+    $('#fl3box').innerHTML = `${derivFailBox()}${terrToggle(ds)}<div id="fl3"></div>`;
+    flow3($('#fl3'), sc, ds, { maxL: 12, maxM: 10, maxR: 14 });
+    const bRec = sum(sc.rows, '_v'), cRec = sum(sc.sgr.filter((r) => r._ok && r._et === 'fondo'), '_v'); const pub = sum(ds.rows, 'v');
+    const k0 = ds.rows.filter((o) => dvKind(o) === 'p0');
+    $('#flsum').innerHTML = `<div class="card"><h3>Lo que entra a los fondos</h3><div class="bars">${FU_ORDER.map((k) => { const v = sum(sc.rows.filter((r) => r._fuk === k), '_v'); return barRow(FU_L[k], [[v, '']], Math.max(bRec, cRec, 1), fmtCOP(v)).replace('background:var(--violet)', 'background:' + FU_C[k]); }).join('')}${barRow('Regalías como ejecutor (DNP)', [[cRec, '']], Math.max(bRec, cRec, 1), fmtCOP(cRec)).replace('background:var(--violet)', 'background:' + FU_C.sgr)}</div><p class="muted" style="font-size:.78rem">Contratos de entidades con fondos: ${fmtCOP(bRec)} en ${fmtN(sc.rows.length)} contratos. Proyectos de regalías con fondo ejecutor: ${fmtCOP(cRec)}.</p></div>
+      <div class="card"><h3>Lo que los fondos publicaron como contratantes</h3><div class="bars">${['c', 'pp', 'p0'].map((k) => { const R = ds.rows.filter((o) => dvKind(o) === k); return barRow(DV_KIND[k], [[sum(R, 'v'), '']], Math.max(1, pub), `${fmtCOP(sum(R, 'v'))} · ${fmtN(R.length)}`).replace('background:var(--violet)', 'background:' + (k === 'p0' ? 'var(--coral)' : 'var(--ok)')); }).join('')}</div><p class="muted" style="font-size:.78rem">${fmtN(k0.length)} procesos (${fmtPct(pub ? sum(k0, 'v') / pub : 0)} del valor) están publicados sin decir a quién se adjudicaron.${tip('sincontr')}</p><button class="btn sm" data-go="contratistas" style="width:fit-content">Ver con quién contratan →</button></div>`;
+    bindNav(view()); bindTerrToggle(); bindDvRetry();
+  }
+
+  // ---------------------------------------------------------------- Vista: ¿con quién contratan los fondos?
+  const dvCols = () => [
+    { k: 'f', l: 'Fecha', sort: true, val: (o) => String(o.f || ''), html: (o) => `<span class="num">${fmtDate(o.f)}</span><span class="sub">${o.kind === 'c' ? 'firma' : 'publicación'}</span>` },
+    { k: 'o', l: 'Objeto · fondo → contratista', cls: 'objeto', val: (o) => o.obj || '', html: (o) => `${esc(String(o.obj || '—').slice(0, 230))}${String(o.obj || '').length > 230 ? '…' : ''}<span class="sub"><button class="linkbtn" data-fondo="${esc(o.k)}" data-name="${esc(o.fnom)}">${esc(titleCase(o.fnom))}</button> → ${o.prov ? `<button class="linkbtn" data-cprov="${esc(o.pk)}">${esc(o.prov)}</button>${o.pdoc ? ` <span class="mono">${esc(o.pdoc)}</span>` : ''}` : '<span class="badge alta">sin contratista publicado</span>'}</span><span class="sub mono">${esc(o.sis)} · ${esc(o.id || o.ref)}${o.url ? ` · <a href="${esc(o.url)}" target="_blank" rel="noopener">SECOP ↗</a>` : ''}${o._dep ? ` · ${esc(o._mun ? munShow(o._mun) + ', ' : '')}${esc(deptName(o._dep))} (${o._ts === 'texto' ? 'según el objeto' : 'sede del fondo'})` : ''}</span>` },
+    { k: 'm', l: 'Modalidad', sort: true, val: (o) => o.mod || '', html: (o) => `${esc(o.mod || '—')}<span class="sub">${o._m === 'comp' ? 'Ley 80 · con competencia' : o._m === 'esp' ? 'Régimen especial (reglas propias)' : 'Ley 80 · directa'}</span>` },
+    { k: 'v', l: 'Valor', r: true, sort: true, val: (o) => o.v, html: (o) => `<span title="${fullCOP(o.v)}">${fmtCOP(o.v)}</span><span class="sub">${o.kind === 'c' ? 'contrato' : 'precio base'}</span>` },
+    { k: 't', l: 'Registro', sort: true, val: (o) => dvKind(o), html: (o) => `${esc(DV_KIND[dvKind(o)])}${o.est ? `<span class="sub">${esc(o.est)}</span>` : ''}${o.ofer !== '' && o.ofer != null ? `<span class="sub">${fmtN(o.ofer)} oferta(s)</span>` : ''}` },
+  ];
+  async function renderContratistas(failBox = '') {
+    const sc = scope();
+    view().innerHTML = `<div class="stack">${head('¿Con quién contratan los fondos?', 'A quién le pasan la plata los fondos', 'Contratos y procesos que los propios fondos publicaron en SECOP I y II como entidad contratante. Se muestran los fondos que reciben recursos de la selección; elija uno arriba para verlo solo.')}${failBox}<div id="ctbox"><p class="loading">Consultando lo que publicaron los fondos en SECOP I y II…</p></div></div>`;
+    try { await ensureDeriv(); } catch (e) { $('#ctbox').innerHTML = `<div class="notice"><b>No fue posible consultar la contratación de los fondos</b><span>${esc(e.message)}</span></div>`; return; }
+    if (!stillOn('contratistas')) return;
+    const ds = dscope(sc); const all = ds.rows;
+    const rows = all.filter((o) => (!CT.prov || o.pk === CT.prov) && (CT.tipo === 'all' || dvKind(o) === CT.tipo));
+    const tot = sum(all, 'v'); const espV = sum(all.filter((o) => o._m === 'esp'), 'v'); const p0 = all.filter((o) => dvKind(o) === 'p0');
+    const provs = groupBy(all.filter((o) => o.prov).map((o) => ({ ...o, _v: o.v, _fk: o.k, proveedor_adjudicado: o.fnom, nombre_entidad: o.prov, nit_entidad: o.pk, _m: o._m, _sgr: 0, fecha_de_firma: o.f })), (o) => o.pk, (o) => ({ nom: o.prov, doc: o.pdoc }));
+    const recib = new Map(); for (const r of sc.rows) { const k = dvKey(r._fk, r.proveedor_adjudicado); recib.set(k, (recib.get(k) || 0) + r._v); } for (const r of sc.sgr) if (r._ok && r._et === 'fondo') { const k = dvKey(sgrEk(r), r.entidadejecutora); recib.set(k, (recib.get(k) || 0) + r._v); }
+    const byF = groupBy(all.map((o) => ({ ...o, _v: o.v, _fk: o.k, proveedor_adjudicado: o.fnom, nombre_entidad: o.prov || '(sin contratista publicado)', nit_entidad: o.pk || '∅', _sgr: 0, fecha_de_firma: o.f })), (o) => o.k, (o) => ({ nom: o.fnom }));
+    const fondosSinPub = [...ds.funds].filter((k) => !byF.some((f) => f.key === k) && recib.get(k) > 0).map((k) => ({ k, v: recib.get(k), nom: fondoNom(k) })).sort((a, b) => b.v - a.v);
+    const pv = CT.prov ? provs.find((p) => p.key === CT.prov) : null;
+    $('#ctbox').innerHTML = `<div class="stack">${derivFailBox()}${terrToggle(ds)}
+      <div class="kpis">
+        <div class="kpi"><span class="l">Publicado por los fondos${tip('derivado')}</span><span class="v" title="${fullCOP(tot)}">${fmtCOP(tot)}</span><span class="s">${fmtN(all.length)} contratos y procesos</span></div>
+        <div class="kpi"><span class="l">Régimen especial${tip('esp')}</span><span class="v">${fmtPct(tot ? espV / tot : 0)}</span><span class="s">reglas propias del fondo, no Ley 80</span></div>
+        <div class="kpi"><span class="l">Sin contratista publicado${tip('sincontr')}</span><span class="v">${fmtN(p0.length)}</span><span class="s">${fmtCOP(sum(p0, 'v'))} · ${fmtPct(tot ? sum(p0, 'v') / tot : 0)} del valor</span></div>
+        <div class="kpi"><span class="l">Contratistas identificados</span><span class="v">${fmtN(provs.length)}</span><span class="s">${fmtN(all.filter((o) => o.kind === 'c').length)} contratos firmados</span></div>
+      </div>
+      ${fondosSinPub.length ? `<div class="notice"><b>${fmtN(fondosSinPub.length)} fondo(s) recibieron recursos en esta selección y no tienen contratación propia publicada en SECOP</b><span>${fondosSinPub.slice(0, 6).map((f) => `<button class="linkbtn" data-fondo="${esc(f.k)}" data-name="${esc(f.nom)}">${esc(titleCase(f.nom))}</button> (recibió ${fmtCOP(f.v)})`).join(' · ')}${fondosSinPub.length > 6 ? '…' : ''}. No se sabe a quién le pasaron la plata: es la pregunta para un derecho de petición.</span></div>` : ''}
+      <div class="stack">
+        <div class="card"><h3>Contratistas que más reciben de los fondos</h3>${!provs.length ? '<p class="muted">Ningún contratista identificado en esta selección.</p>' : `<div class="bars">${provs.slice(0, 15).map((p) => barRow(titleCase(p.nom), modParts(p.by), provs[0].v, `${fmtCOP(p.v)} · ${fmtN(p.n)}`, `data-cprov="${esc(p.key)}"`)).join('')}</div>`}<p class="muted" style="font-size:.78rem">Toque un contratista para ver solo sus contratos. Color: modalidad.</p></div>
+        <div class="card"><h3>Por fondo: lo que recibe y lo que publica</h3><div class="tablewrap"><table><thead><tr><th>Fondo</th><th class="r">Recibe en la selección</th><th class="r">Publicado como contratante</th><th class="r">Sin contratista publicado</th><th>Principal contratista</th></tr></thead><tbody>${byF.slice(0, 40).map((f) => { const top = topOf(f.ents).find((e) => e.key !== '∅'); const s0 = f.ents.get('∅'); return `<tr><td style="min-width:240px">${isFoco(f.key) ? '★ ' : ''}<button class="linkbtn" data-fondo="${esc(f.key)}" data-name="${esc(f.nom)}" title="${esc(f.nom)}">${esc(shortF(f.key, f.nom))}</button>${NO_FM.has(f.key) ? '<span class="sub">empresa pública, no es fondo mixto</span>' : ''}</td><td class="r">${recib.get(f.key) ? fmtCOP(recib.get(f.key)) : '—'}</td><td class="r">${fmtCOP(f.v)}<span class="sub">${fmtN(f.n)} registros</span></td><td class="r">${s0 ? `${fmtN(s0.n)}<span class="sub">${fmtCOP(s0.v)}</span>` : '—'}</td><td>${top ? `<button class="linkbtn" data-cprov="${esc(top.key)}">${esc(titleCase(top.nom))}</button><span class="sub">${fmtCOP(top.v)}</span>` : '—'}</td></tr>`; }).join('')}</tbody></table></div></div>
+      </div>
+      <div class="card"><div class="row" style="justify-content:space-between"><h3>${pv ? `Contratos de ${esc(titleCase(pv.nom))} con los fondos` : 'Todos los contratos y procesos de los fondos'}</h3>${CT.prov ? '<button class="btn sm" id="ct_clr">Ver todos los contratistas</button>' : ''}</div>
+        <div class="chips">${[['all', 'Todos'], ['c', DV_KIND.c], ['pp', DV_KIND.pp], ['p0', DV_KIND.p0]].map(([k, l]) => `<button class="btn sm ${CT.tipo === k ? 'primary' : ''}" data-ctt="${k}">${esc(l)} · ${fmtN(k === 'all' ? all.filter((o) => !CT.prov || o.pk === CT.prov).length : all.filter((o) => dvKind(o) === k && (!CT.prov || o.pk === CT.prov)).length)}</button>`).join('')}</div>
+        <div id="cttb"></div>
+        <p class="muted" style="font-size:.78rem">Fuentes: SECOP Integrado (contratos de SECOP I y II firmados por los fondos) y SECOP II Procesos (procesos que los fondos publicaron; si un proceso ya tiene contrato, se muestra solo el contrato). SECOP no informa con recursos de qué entidad se paga cada contrato del fondo; el territorio se deduce del texto del objeto o, si no lo menciona, es la sede del fondo. GESPRODE publica solo en SECOP I.</p></div></div>`;
+    dataTable($('#cttb'), rows, dvCols(), { sort: 'v', size: 25, empty: 'Sin registros para esta selección.' });
+    const bindC = (root) => root.querySelectorAll('[data-cprov]').forEach((b) => { b.onclick = () => { CT.prov = b.dataset.cprov; CT.tipo = 'all'; renderContratistas(failBox).then(() => bindNav(view())); }; });
+    bindC($('#ctbox')); $('#cttb').addEventListener('click', (e) => { const b = e.target.closest('[data-cprov]'); if (b) { CT.prov = b.dataset.cprov; CT.tipo = 'all'; renderContratistas(failBox).then(() => bindNav(view())); } });
+    $$('[data-ctt]').forEach((b) => { b.onclick = () => { CT.tipo = b.dataset.ctt; renderContratistas(failBox).then(() => bindNav(view())); }; });
+    const cc = $('#ct_clr'); if (cc) cc.onclick = () => { CT.prov = ''; renderContratistas(failBox).then(() => bindNav(view())); };
+    bindNav(view()); bindTerrToggle(); bindDvRetry();
+  }
+  const dvRow = (o) => ({ Fondo: o.fnom, 'NIT fondo': o.k, 'En foco': isFoco(o.k) ? 'Sí' : '', Contratista: o.prov || '(sin contratista publicado)', 'NIT contratista': o.pdoc || '', Objeto: o.obj, Valor: o.v, 'Qué valor es': o.kind === 'c' ? 'Valor del contrato' : 'Precio base del proceso', Fecha: fmtDate(o.f).replace('—', ''), 'Qué fecha es': o.kind === 'c' ? 'Firma' : 'Publicación', Modalidad: o.mod, 'Régimen': o._m === 'comp' ? 'Ley 80 · con competencia' : o._m === 'esp' ? 'Régimen especial (reglas propias)' : 'Ley 80 · directa', Registro: DV_KIND[dvKind(o)], Estado: o.est || '', 'Ofertas recibidas': o.ofer, Departamento: deptName(o._dep), Municipio: munShow(o._mun), 'Territorio según': o._ts === 'texto' ? 'Texto del objeto' : o._ts === 'sede' ? 'Sede del fondo' : '', Sistema: o.sis, 'ID contrato o proceso': o.id, 'Referencia del proceso': o.ref, 'Enlace SECOP': o.url });
+
   // ---------------------------------------------------------------- Descargas: CSV, Excel y PDF
   const stamp = () => isoDay(new Date());
   const alTxt = (r) => (r._al || []).map((k) => AL[k][0]).join(' | ');
   function contractRow(r) {
-    return { Departamento: deptName(r._dep), Municipio: munShow(r._mun), 'Tipo de entidad': ENT_T[r._t], Entidad: r.nombre_entidad, 'NIT entidad': r.nit_entidad, 'Fondo o contratista': r.proveedor_adjudicado, 'NIT contratista': r.documento_proveedor,
+    return { Departamento: deptName(r._dep), Municipio: munShow(r._mun), 'Entidad territorial': terrName(terrKey(r), r.nombre_entidad), 'Tipo de entidad': ENT_T[r._t], Entidad: r.nombre_entidad, 'NIT entidad': r.nit_entidad, 'Fondo o contratista': r.proveedor_adjudicado, 'NIT contratista': r.documento_proveedor,
       'ID contrato': r.id_contrato, Referencia: r.referencia_del_contrato, 'Fecha de firma': fmtDate(r.fecha_de_firma).replace('—', ''), Inicio: fmtDate(r.fecha_de_inicio_del_contrato).replace('—', ''), Fin: fmtDate(r.fecha_de_fin_del_contrato).replace('—', ''),
       Objeto: r.objeto_del_contrato, 'Tipo de contrato': r.tipo_de_contrato, Modalidad: r.modalidad_de_contratacion, 'Justificación': r.justificacion_modalidad_de, 'Clasificación': MODL[r._m], 'Sin competencia': SIN.has(r._m) ? 'Sí' : 'No',
-      'Valor del contrato': r._v, 'Regalías (SGR)': r._sgr, 'Valor pagado': num(r.valor_pagado), 'Días adicionados': num(r.dias_adicionados), Estado: r.estado_contrato, 'Ordenador del gasto': r.nombre_ordenador_del_gasto, Supervisor: r.nombre_supervisor, 'Representante legal del contratista': r.nombre_representante_legal, Alertas: alTxt(r), 'Enlace SECOP': urlOf(r.urlproceso) };
+      'Valor del contrato': r._v, 'Fuente principal': r._src === 'SECOP I' ? 'SECOP I no la informa' : FU_L[r._fuk], 'Regalías (SGR)': r._sgr, 'Recursos propios': r._fu ? r._fu.prop : 0, 'SGP, Nación o crédito': r._fu ? r._fu.otras : 0, Sistema: r._src || 'SECOP II', 'Valor pagado': num(r.valor_pagado), 'Días adicionados': num(r.dias_adicionados), Estado: r.estado_contrato, 'Ordenador del gasto': r.nombre_ordenador_del_gasto, Supervisor: r.nombre_supervisor, 'Representante legal del contratista': r.nombre_representante_legal, Alertas: alTxt(r), 'Enlace SECOP': urlOf(r.urlproceso) };
   }
-  const sgrRow = (r) => ({ Departamento: deptName(r._dep), 'Municipio / territorio': munShow(r._mun), OCAD: r.nomocad, BPIN: r.codigobpin, Proyecto: r.nombre, Sector: r.sector, 'Entidad ejecutora': r.entidadejecutora, 'Tipo de ejecutor': EJ_T[r._et], Estado: r.estado, 'Valor total': r._v, 'Avance físico %': r.ejecucionfisica != null ? num(r.ejecucionfisica) : '', 'Avance financiero %': r.ejecucionfinanciera != null ? num(r.ejecucionfinanciera) : '', 'Pagos adelante de la obra': r._gap >= 30 ? 'Sí' : '', 'Fuentes (Hacienda 2025–2026)': [...new Set((r._f || []).map((x) => x.nombrefondo))].join(' | '), 'Tipo de fuente': (r._fam || []).join(' | '), 'Fuentes (DNP, todas las vigencias)': (r._fd || []).map((o) => `${o.tipo} (${Math.round(o.share * 100)} %; ${o.ent})`).join(' | '), 'Bienios con recursos': (r._bi || []).join(' | '), 'Entidad que aporta': [...new Set((r._f || []).map((x) => x.nombreentidad))].join(' | '), 'Aprobado bienio': sum(r._f || [], 'recursosaprobadosasignadosspgr'), 'Pagado bienio': sum(r._f || [], 'apropiacionpagada'), Interventor: r.interventor || '' });
+  const sgrRow = (r) => ({ Departamento: deptName(r._dep), 'Municipio / territorio': munShow(r._mun), OCAD: r.nomocad, BPIN: r.codigobpin, Proyecto: r.nombre, Sector: r.sector, 'Entidad ejecutora': r.entidadejecutora, 'Tipo de ejecutor': EJ_T[r._et], Estado: r.estado, 'Valor total': r._v, 'Avance físico %': r.ejecucionfisica != null ? num(r.ejecucionfisica) : '', 'Avance financiero %': r.ejecucionfinanciera != null ? num(r.ejecucionfinanciera) : '', 'Pagos adelante de la obra': r._gap >= 30 ? 'Sí' : '', 'Fuentes (Hacienda 2025–2026)': [...new Set((r._f || []).map((x) => x.nombrefondo))].join(' | '), 'Tipo de fuente': (r._fam || []).join(' | '), 'Fuentes (DNP, todas las vigencias)': (r._fd || []).map((o) => `${o.tipo} (${Math.round(o.share * 100)} %; ${o.ent})`).join(' | '), 'Bienios con recursos': (r._bi || []).join(' | '), 'Entidad que aporta': [...new Set((r._f || []).map((x) => x.nombreentidad))].join(' | '), 'Aprobado bienio': sum(r._f || [], 'recursosaprobadosasignadosspgr'), 'Pagado bienio': sum(r._f || [], 'apropiacionpagada'), Interventor: r.interventor || '', 'Enlace DNP (datos abiertos)': `https://www.datos.gov.co/resource/mzgh-shtp.json?codigobpin=${encodeURIComponent(r.codigobpin || '')}` });
   function exportTables() {
     const h = (location.hash || '#panorama').slice(1);
     if (h === 'regalias') {
@@ -1804,6 +2049,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
         { k: 'relaciones', l: 'Relaciones entidad–fondo', g: 'desc', pdf: ['Entidad', 'Fondo', 'Contratos', 'Valor', '% sin competencia', 'Periodo'], rows: rel.map((g) => ({ Departamento: deptName(g.dep), Municipio: munShow(g.mun), Entidad: g.ent, 'Tipo de entidad': ENT_T[g.t], Fondo: g.fondo, 'NIT fondo': g.doc, Contratos: g.n, Valor: g.v, 'Regalías (SGR)': g.sgr, ...mrow(g), Periodo: span(g.f1, g.f2), 'Primer contrato': g.f1, 'Último contrato': g.f2 })) },
         { k: 'alertas', l: 'Alertas', g: 'desc', pdf: ['Alerta', 'Fecha de firma', 'Entidad', 'Fondo', 'Valor'], rows: R.flatMap((r) => r._al.map((k) => ({ Alerta: AL[k][0], Nivel: { alta: 'Alta', media: 'Media', nd: 'Informativa' }[AL[k][1]], 'Ventana electoral': r._gar && /^gar/.test(k) ? r._gar : '', 'Fecha de firma': fmtDate(r.fecha_de_firma), Entidad: r.nombre_entidad, Fondo: r.proveedor_adjudicado, Modalidad: r.modalidad_de_contratacion, Valor: r._v, 'ID contrato': r.id_contrato, 'Enlace SECOP': urlOf(r.urlproceso) }))).sort((a, b) => b.Valor - a.Valor) },
         { k: 'contratos', l: 'Contratos (datos en bruto)', g: 'bruto', pdf: ['Fecha de firma', 'Entidad', 'Fondo o contratista', 'Clasificación', 'Valor del contrato', 'Objeto'], rows: R.map(contractRow).sort((a, b) => String(b['Fecha de firma']).localeCompare(String(a['Fecha de firma']))) },
+        { k: 'contratacion_fondos', l: 'Contratación de los fondos (a quién le pasan la plata)', g: 'bruto', pdf: ['Fondo', 'Contratista', 'Modalidad', 'Valor', 'Registro'], rows: inFicha || !DERIV ? [] : dscope(sc).rows.filter((o) => (location.hash || '').slice(1) !== 'contratistas' || !CT.prov || o.pk === CT.prov).map(dvRow).sort((a, b) => b.Valor - a.Valor) },
         { k: 'regalias_fondos', l: 'Proyectos de regalías ejecutados por fondos (datos en bruto)', g: 'bruto', pdf: ['Proyecto', 'Entidad ejecutora', 'OCAD', 'Estado', 'Valor total'], rows: sgr.map(sgrRow).sort((a, b) => b['Valor total'] - a['Valor total']) },
       ] };
   }
@@ -1821,7 +2067,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
       const ws0 = XLSX.utils.aoa_to_sheet(lea); ws0['!cols'] = [{ wch: 130 }]; XLSX.utils.book_append_sheet(wb, ws0, 'Léame');
       for (const t of T) {
         const ws = t.rows.length ? XLSX.utils.json_to_sheet(t.rows) : XLSX.utils.aoa_to_sheet([['Sin registros para esta selección.']]);
-        if (t.rows.length) { const keys = Object.keys(t.rows[0]); ws['!cols'] = keys.map((k) => ({ wch: /objeto|proyecto/i.test(k) ? 70 : Math.min(48, Math.max(11, k.length + 2, ...t.rows.slice(0, 150).map((r) => Math.min(48, String(r[k] ?? '').length)))) })); ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: t.rows.length, c: keys.length - 1 } }) }; keys.forEach((k, C) => { if (!isMoney(k)) return; for (let Rr = 1; Rr <= t.rows.length; Rr++) { const c = ws[XLSX.utils.encode_cell({ r: Rr, c: C })]; if (c && c.t === 'n') c.z = '#,##0'; } }); }
+        if (t.rows.length) { const keys = Object.keys(t.rows[0]); ws['!cols'] = keys.map((k) => ({ wch: /objeto|proyecto/i.test(k) ? 70 : Math.min(48, Math.max(11, k.length + 2, ...t.rows.slice(0, 150).map((r) => Math.min(48, String(r[k] ?? '').length)))) })); ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: t.rows.length, c: keys.length - 1 } }) }; keys.forEach((k, C) => { if (/^Enlace/.test(k)) { for (let Rr = 1; Rr <= t.rows.length; Rr++) { const c = ws[XLSX.utils.encode_cell({ r: Rr, c: C })]; if (c && /^https?:/.test(String(c.v))) c.l = { Target: String(c.v), Tooltip: 'Abrir en SECOP' }; } return; } if (!isMoney(k)) return; for (let Rr = 1; Rr <= t.rows.length; Rr++) { const c = ws[XLSX.utils.encode_cell({ r: Rr, c: C })]; if (c && c.t === 'n') c.z = '#,##0'; } }); }
         XLSX.utils.book_append_sheet(wb, ws, t.l.replace(/[\\/?*[\]:]/g, ' ').slice(0, 31));
       }
       const gl = Object.values(G).map(([t, d]) => ({ 'Término': t, Significado: d })); const wsg = XLSX.utils.json_to_sheet(gl); wsg['!cols'] = [{ wch: 44 }, { wch: 140 }]; XLSX.utils.book_append_sheet(wb, wsg, 'Glosario');
@@ -1837,6 +2083,15 @@ td.objeto { min-width: 260px; max-width: 460px; }
       <h2>Términos usados</h2><table><tbody>${used.map((k) => `<tr><td style="width:26%"><b>${esc(G[k][0])}</b></td><td>${esc(G[k][1])}</td></tr>`).join('')}</tbody></table>
       <p class="small">Una alerta es una señal para investigar, no una prueba de ilegalidad ni de corrupción. Fuentes: SECOP I y II (Colombia Compra Eficiente), DNP (proyectos del Sistema General de Regalías) y Ministerio de Hacienda (ejecución de regalías, bienio 2025–2026). Elaborado por RADAR DEL PODER.</p>`;
     const old = document.title; document.title = base; setTimeout(() => { window.print(); document.title = old; }, 150);
+  }
+  async function quickExcel(btn) {
+    const lab = btn.textContent; btn.disabled = true; btn.textContent = 'Preparando Excel…';
+    try {
+      const h = (location.hash || '#panorama').slice(1).split('/')[0];
+      if (CORE && h !== 'regalias' && h !== 'glosario') { try { await ensureDeriv(); } catch (_) { /* sigue sin la contratación de los fondos */ } }
+      const X = exportTables(); if (!X) { toast('Espere a que carguen los datos.'); return; }
+      doExport('xlsx', X, X.tables.filter((t) => t.rows.length).map((t) => t.k), true);
+    } finally { btn.disabled = false; btn.textContent = lab; }
   }
   function openExport() {
     const X = exportTables(); if (!X) return toast('Espere a que carguen los datos.');
@@ -1887,6 +2142,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const t = e.target.closest('.tip'); if (t) { e.preventDefault(); e.stopPropagation(); if (bubbleFor === t && bubble.classList.contains('on')) hideTip(); else showTip(t); return; }
     if (bubbleFor) hideTip();
     if (e.target.closest('[data-dl]') || e.target.closest('#dlbtn')) openExport();
+    const xl = e.target.closest('[data-xl]'); if (xl) quickExcel(xl);
   }, true);
   window.addEventListener('scroll', hideTip, { passive: true });
   $('#themebtn').onclick = () => { const r = document.documentElement; const dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; r.dataset.theme = dark ? 'light' : 'dark'; try { localStorage.setItem('radar_theme', r.dataset.theme); } catch (_) { /* */ } };
