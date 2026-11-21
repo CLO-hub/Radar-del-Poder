@@ -867,11 +867,13 @@ td.objeto { min-width: 260px; max-width: 460px; }
         <div class="card"><h3>Entidades territoriales que más entregan</h3><div class="bars">${ents.slice(0, 12).map((e) => barRow(e.nom, modParts(e.by), ents[0].v, fmtCOP(e.v), `data-setent="${esc(e.key)}"`)).join('') || '<p class="muted">Sin contratos.</p>'}</div><p class="muted" style="font-size:.78rem">Toque una entidad para filtrar todo por ella.</p></div>
         <div class="card"><h3>Fondos que más reciben</h3><div class="bars">${fondos.slice(0, 12).map((f) => barRow((FOCO.some((x) => x[0] === f.key) ? '★ ' : '') + f.nom, modParts(f.by), fondos[0].v, fmtCOP(f.v), `data-fondo="${esc(f.key)}" data-name="${esc(f.nom)}"`)).join('') || '<p class="muted">Sin contratos.</p>'}</div><button class="btn sm" data-go="fondos" style="width:fit-content">Ver los ${fmtN(fondos.length)} fondos →</button></div>
       </div>
+      ${sg.length && (F.dept || F.muni || F.ent) ? `<div class="card"><h3>Proyectos de regalías con un fondo como ejecutor${tip('ejecutor')}</h3><p class="muted" style="font-size:.85rem">Proyectos aprobados para ${esc(sc.label)} en los que un fondo es la entidad ejecutora (camino C): no hay contrato de la entidad con el fondo en SECOP.</p><div id="pansgr"></div></div>` : ''}
       <div class="row">${alN ? `<button class="btn" data-go="alertas">Ver ${fmtN(alN)} contratos con alertas →</button>` : ''}<button class="btn" data-go="contratistas">¿Con quién contratan los fondos? →</button></div>`}
       ${F.cam === 'all' ? `<details><summary class="muted" style="cursor:pointer">Cómo se gastan las regalías: caminos A, B y C</summary>${caminosCard(sc)}</details>` : ''}
       ${qlink(sc.D.a)}</div>`;
     view().querySelectorAll('[data-setent]').forEach((b) => { b.onclick = () => { F.ent = b.dataset.setent; route(); }; });
     view().querySelectorAll('[data-setfu]').forEach((b) => { b.onclick = () => { F.fu = b.dataset.setfu; route(); }; });
+    if ($('#pansgr')) sgrTable($('#pansgr'), sc.sgr.filter((r) => r._et === 'fondo'), {});
     bindAtip();
     if ($('#pfl')) ensureDeriv().then(() => { if (stillOn('panorama') && $('#pfl')) { const ds = dscope(sc); flow3($('#pfl'), sc, ds, { maxL: 8, maxM: 8, maxR: 10 }); } }).catch((e) => { if ($('#pfl')) $('#pfl').innerHTML = `<p class="muted">No fue posible consultar la contratación de los fondos: ${esc(e.message)}</p>`; });
   }
