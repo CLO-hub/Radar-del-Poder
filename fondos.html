@@ -1794,7 +1794,6 @@ td.objeto { min-width: 260px; max-width: 460px; }
   // ---------------------------------------------------------------- Contratación de los fondos: a quién le pasan la plata (SECOP I, SECOP II contratos y procesos)
   let DERIV = null, derivLoading = null;
   const CT = { prov: '', tipo: 'all' };
-  const DV_NAME = ['FONDO MIXTO', 'FONCOLOMBIA', 'GESPRODE', 'FONPACIFICO', 'EDUBAR'];
   const normRef = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   const NOPROV = /^(NO DEFINIDO|NO ADJUDICADO|N\/?A|SIN DEFINIR|)$/i;
   const DV_KIND = { c: 'Contrato firmado', pp: 'Proceso con contratista informado', p0: 'Proceso sin contratista publicado' };
@@ -1802,13 +1801,17 @@ td.objeto { min-width: 260px; max-width: 460px; }
   const isFoco = (k) => FOCO.some((x) => x[0] === k);
   const shortF = (k, nom) => { const f = FOCO.find((x) => x[0] === k); if (f) return f[1]; const sd = SEEDS.find((x) => x[0] === k); return sd ? sd[1] : titleCase(String(nom || k).replace(/^FONDO MIXTO (DE |PARA (LA |EL )?)?/i, 'F. M. ')); };
   async function loadDeriv(P) {
-    const nits = fondoNits().flatMap(docVariants).map(sqlStr).join(',');
-    const like = (f) => DV_NAME.map((w) => `upper(${f}) like '%${w}%'`).join(' OR ');
+    // Consultas separadas por nombre (con índice de texto) y por NIT: la combinación con OR es demasiado lenta en SECOP Integrado
+    const nl = fondoNits(); const nits = nl.flatMap(docVariants).map(sqlStr).join(','); const nitsH = [...nl.flatMap(docVariants), ...nl.flatMap((n) => '0123456789'.split('').map((d) => n + '-' + d))].map(sqlStr).join(',');
     const PSEL = 'entidad,nit_entidad,departamento_entidad,id_del_proceso,referencia_del_proceso,nombre_del_procedimiento,descripci_n_del_procedimiento,fecha_de_publicacion_del,precio_base,modalidad_de_contratacion,respuestas_al_procedimiento,adjudicado,valor_total_adjudicacion,nombre_del_proveedor,nit_del_proveedor_adjudicado,urlproceso,estado_resumen';
-    const [ct, pr] = await Promise.all([
-      part('integrado', { select: S1_SEL + ',origen,numero_de_proceso', where: `(${like('nombre_de_la_entidad')} OR nit_de_la_entidad in (${nits})) AND ${periodWhere('fecha_de_firma_del_contrato', P)}`, limit: 60000 }),
-      part('procesos', { select: PSEL, where: `(${like('entidad')} OR nit_entidad in (${nits})) AND ${periodWhere('fecha_de_publicacion_del', P)}`, limit: 60000 }),
+    const CSEL = S1_SEL + ',origen,numero_de_proceso'; const cW = periodWhere('fecha_de_firma_del_contrato', P), pW = periodWhere('fecha_de_publicacion_del', P);
+    const [ca, cb, pa, pb] = await Promise.all([
+      part('integrado', { select: CSEL, q: 'fondo mixto', where: `upper(nombre_de_la_entidad) like '%FONDO MIXTO%' AND ${cW}`, limit: 60000 }),
+      part('integrado', { select: CSEL, where: `nit_de_la_entidad in (${nitsH}) AND ${cW}`, limit: 60000 }),
+      part('procesos', { select: PSEL, q: 'fondo mixto', where: `upper(entidad) like '%FONDO MIXTO%' AND ${pW}`, limit: 60000 }),
+      part('procesos', { select: PSEL, where: `nit_entidad in (${nits}) AND ${pW}`, limit: 60000 }),
     ]);
+    const ct = { ok: ca.ok && cb.ok, rows: [...ca.rows, ...cb.rows] }, pr = { ok: pa.ok && pb.ok, rows: [...pa.rows, ...pb.rows] };
     const rows = []; const refs = new Set(); const seen = new Set(); const nameKey = new Map();
     const dv = (o) => {
       o._m = modClass(o.mod, ''); o._y = yr(o.f); const T = segTerr(o.obj);
@@ -1837,12 +1840,16 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const P = getPeriod(F.pk);
     if (DERIV && DERIV.P.k === P.k) return DERIV;
     if (!derivLoading || derivLoading.k !== P.k) derivLoading = { k: P.k, p: loadDeriv(P) };
-    const d = await derivLoading.p; if (derivLoading && derivLoading.k === P.k) { DERIV = d; derivLoading = null; }
+    const d = await derivLoading.p; if (derivLoading && derivLoading.k === P.k) { DERIV = d; derivLoading = null; _dvk.clear(); }
     return d;
   }
   // Une la clave de un fondo (NIT o nombre) con la que usa su propia contratación
+  const _dvk = new Map();
   function dvKey(k, name) {
     if (/^\d{6,}$/.test(k) || !DERIV) return k;
+    const mk = k + '|' + (name || ''); if (_dvk.has(mk)) return _dvk.get(mk); const v = dvKey0(k, name); _dvk.set(mk, v); return v;
+  }
+  function dvKey0(k, name) {
     const c = clean(name || k); if (DERIV.nameKey.has(c)) return DERIV.nameKey.get(c);
     const m = ejecMatch(name || k, [...DERIV.nameKey.keys()]); return m.length === 1 ? DERIV.nameKey.get(m[0]) : k;
   }
