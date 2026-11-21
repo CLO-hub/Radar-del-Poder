@@ -1617,6 +1617,134 @@ td.objeto { min-width: 260px; max-width: 460px; }
     } catch (e) { toast('No fue posible armar el informe: ' + e.message); }
     if (btn) { btn.disabled = false; btn.textContent = lab; }
   }
+  // ---------------------------------------------------------------- Excel de seguimiento: qué se ejecuta por fondos mixtos, por qué ruta, con qué recursos y qué se publicó
+  const SEG_PD = ['76', '05', '08', '68', '54']; // Valle, Antioquia, Atlántico, Santander, Norte de Santander
+  const SEG_PM = { CALI: '76', MEDELLIN: '05', BARRANQUILLA: '08', BUCARAMANGA: '68', CUCUTA: '54', BARRANCABERMEJA: '68' };
+  const SEG_SRC = [['recursos_propios_alcald_as_gobernaciones_y_resguardos_ind_genas_', 'Recursos propios de la entidad territorial'], ['recursos_propios', 'Recursos propios'], ['sistema_general_de_participaciones', 'Sistema General de Participaciones'], ['sistema_general_de_regal_as', 'Regalías (SGR)'], ['presupuesto_general_de_la_nacion_pgn', 'Presupuesto General de la Nación'], ['recursos_de_credito', 'Recursos de crédito']];
+  const segRegimen = (m) => { const n = normTxt(m || ''); return /REGIMEN ESPECIAL/.test(n) ? 'Régimen especial o derecho privado' : /DIRECTA|CONVENIOS CON MAS DE DOS PARTES/.test(n) ? 'Ley 80 · contratación directa' : n ? 'Ley 80 · con competencia' : 'Sin dato'; };
+  // Territorio mencionado en un texto libre (objeto de un proceso): departamento y, si se puede, municipio
+  function segTerr(text) {
+    const t = ' ' + clean(text) + ' '; const G0 = geoInit(); let dep = '';
+    if (/ NORTE DE SANTANDER /.test(t)) dep = '54';
+    else { const hits = DEPTS.filter((d) => d.code !== '54' && t.includes(' ' + clean(d.name) + ' ')).sort((a, b) => b.name.length - a.name.length); if (hits.length) dep = hits[0].code; else if (/ VALLE /.test(t) && !/ VALLE DE | VALLE DEL (?!CAUCA)/.test(t)) dep = '76'; }
+    let mun = '';
+    for (const [m, dc] of Object.entries(SEG_PM)) if (t.includes(' ' + m + ' ') && (!dep || dep === dc)) { mun = m; dep = dc; break; }
+    if (!mun && dep && G0.idx[dep]) for (const cm of G0.idx[dep].keys()) if (cm.length >= 5 && cm.length > mun.length && t.includes(' ' + cm + ' ')) mun = cm;
+    return { dep, mun };
+  }
+  async function exportSeguimiento(btn, soloPrior) {
+    if (typeof XLSX === 'undefined') return toast('No cargó la librería de Excel; revise la conexión.');
+    const lab = btn ? btn.textContent : ''; if (btn) { btn.disabled = true; btn.textContent = 'Consultando SECOP y DNP… puede tardar un minuto'; }
+    try {
+      const P = getPeriod('todo'); const D = CORE && CORE.P.k === 'todo' ? CORE : await loadCore(P);
+      const W = periodWhere('fecha_de_firma', P); const nits = fondoNits().flatMap(docVariants).map(sqlStr).join(',');
+      const srcSel = 'id_contrato,origen_de_los_recursos,destino_gasto,' + SEG_SRC.map((s) => s[0]).join(',');
+      const PSEL = 'entidad,nit_entidad,departamento_entidad,ciudad_entidad,id_del_proceso,referencia_del_proceso,nombre_del_procedimiento,descripci_n_del_procedimiento,fase,fecha_de_publicacion_del,precio_base,modalidad_de_contratacion,justificaci_n_modalidad_de,proveedores_invitados,respuestas_al_procedimiento,estado_del_procedimiento,adjudicado,valor_total_adjudicacion,nombre_del_proveedor,nit_del_proveedor_adjudicado,tipo_de_contrato,urlproceso,estado_resumen';
+      const pW = `upper(entidad) like '%FONDO MIXTO%' OR upper(entidad) like '%FONCOLOMBIA%' OR nit_entidad in (${nits})`;
+      let [s1, s2, proc, own2, own1] = await Promise.all([
+        part('contratos', { select: srcSel, q: 'fondo mixto', where: `${W} AND upper(proveedor_adjudicado) like '%MIXTO%'`, limit: 50000 }),
+        part('contratos', { select: srcSel, where: `${W} AND documento_proveedor in (${nits})`, limit: 50000 }),
+        part('procesos', { select: PSEL, where: pW, limit: 50000 }),
+        part('contratos', { select: FS, where: `upper(nombre_entidad) like '%FONDO MIXTO%' OR upper(nombre_entidad) like '%FONCOLOMBIA%' OR nit_entidad in (${nits})`, limit: 50000 }),
+        part('integrado', { select: S1_SEL, where: `origen='SECOPI' AND upper(nombre_de_la_entidad) like '%FONDO MIXTO%'`, limit: 50000 }),
+      ]);
+      if (!proc.ok) proc = await part('procesos', { where: pW, limit: 50000 }); // sin lista de campos, por si alguno cambió de nombre
+      const src = new Map(); for (const r of [...s1.rows, ...s2.rows]) src.set(r.id_contrato, r);
+      const isCoreE = (r) => (r._t === 'alc' || r._t === 'gob') && !DESC_RE.test(normTxt(r.nombre_entidad));
+      const terrEnt = (r) => (r._t === 'alc' ? 'Alcaldía de ' + (munShow(r._mun) || '(sin municipio)') : r._t === 'gob' ? 'Gobernación de ' + (deptName(r._dep) || '(sin departamento)') : titleCase(r.nombre_entidad || ''));
+      const prB = (r) => (r._t === 'alc' && SEG_PM[r._mun] === r._dep) || (r._t === 'gob' && SEG_PD.includes(r._dep)) ? (isCoreE(r) ? 'Sí' : 'Sí (entidad descentralizada u órgano de control)') : 'No';
+      // --- B: contratos entidad → fondo
+      const Brows = D.rows.map((r) => {
+        const s = src.get(r.id_contrato) || {}; const vals = SEG_SRC.map(([k, l]) => [l, k === 'sistema_general_de_regal_as' ? r._sgr : num(s[k])]); const top = vals.slice().sort((a, b) => b[1] - a[1])[0];
+        const o = { 'Ruta de ejecución': 'B · La entidad contrata al fondo', Departamento: deptName(r._dep), Municipio: munShow(r._mun), 'Entidad territorial': terrEnt(r), 'Territorio priorizado': prB(r), 'Entidad en SECOP (dependencia)': r.nombre_entidad, 'NIT entidad': r.nit_entidad, 'Tipo de entidad': ENT_T[r._t], 'Fondo mixto': r.proveedor_adjudicado, 'NIT o clave del fondo': r._fk,
+          'Contratista del fondo (derivado)': '', Objeto: r.objeto_del_contrato, 'Tipo de contrato': r.tipo_de_contrato, Valor: r._v, 'Valor adjudicado': '', Fecha: fmtDate(r.fecha_de_firma).replace('—', ''), 'Qué fecha es': 'Firma del contrato', 'Año': r._y || '', Modalidad: r.modalidad_de_contratacion, 'Justificación': r.justificacion_modalidad_de, 'Régimen de selección': segRegimen(r.modalidad_de_contratacion), 'Sin competencia': SIN.has(r._m) ? 'Sí' : 'No',
+          'Origen principal del recurso': s.id_contrato || r._sgr ? (top && top[1] > 0 ? top[0] : 'Sin dato de fuente') : (r._src === 'SECOP I' ? 'SECOP I no lo informa' : 'Sin dato de fuente'), '¿Es regalías?': r._sgr > 0 ? 'Sí' : (r._src === 'SECOP I' ? 'SECOP I no lo informa' : 'No') };
+        for (const [l, v] of vals) o[l] = v;
+        Object.assign(o, { 'Tipo de regalía (DNP)': '', 'Bienios con recursos': '', 'Avance físico %': '', 'Avance financiero %': '', 'Pagos − obra (puntos)': '', 'Valor pagado (SECOP)': num(r.valor_pagado), 'Aprobado Hacienda 2025–2026': '', 'Pagado Hacienda 2025–2026': '', Estado: r.estado_contrato,
+          '¿Publicado en SECOP?': 'Sí', '¿Hay contrato entidad–fondo en SECOP?': 'Sí (este registro)', 'Procesos del fondo en SECOP para este territorio': '', 'Valor de esos procesos': '', 'Oferentes o respuestas': '', Adjudicado: '', Sistema: r._src || 'SECOP II', 'ID contrato o proceso': r.id_contrato, BPIN: '', Alertas: alTxt(r), Enlace: urlOf(r.urlproceso), _dep: r._dep });
+        return o;
+      });
+      // --- Derivados: lo que el propio fondo publicó como entidad contratante
+      const seenD = new Set(); const Drows = []; const dName = new Map();
+      const addD = (o) => { if (seenD.has(o._id)) return; seenD.add(o._id); Drows.push(o); };
+      const dRow = (ent, nit, obj, tipo, base, adj, fecha, que, mod, just, prov, ofer, adju, estado, sis, id, link) => {
+        const key = nitBase(nit) || clean(ent); dName.set(clean(ent), key); const T = segTerr(obj); const y = yr(fecha);
+        const pr = T.mun && SEG_PM[T.mun] === T.dep ? 'Sí (municipio mencionado en el objeto)' : !T.mun && SEG_PD.includes(T.dep) ? 'Por verificar (solo menciona el departamento)' : 'No';
+        const o = { 'Ruta de ejecución': 'Derivado · Contratación del propio fondo', Departamento: deptName(T.dep), Municipio: munShow(T.mun), 'Entidad territorial': '(no informada: territorio deducido del objeto)', 'Territorio priorizado': pr, 'Entidad en SECOP (dependencia)': ent, 'NIT entidad': nit, 'Tipo de entidad': 'Fondo mixto', 'Fondo mixto': ent, 'NIT o clave del fondo': key,
+          'Contratista del fondo (derivado)': prov && !/NO DEFINIDO/i.test(prov) ? prov : '', Objeto: obj, 'Tipo de contrato': tipo, Valor: num(base), 'Valor adjudicado': adj === '' ? '' : num(adj), Fecha: fmtDate(fecha).replace('—', ''), 'Qué fecha es': que, 'Año': y || '', Modalidad: mod, 'Justificación': just || '', 'Régimen de selección': segRegimen(mod), 'Sin competencia': /REGIMEN ESPECIAL|DIRECTA/.test(normTxt(mod || '')) ? 'Sí' : 'No',
+          'Origen principal del recurso': 'No informado en el proceso', '¿Es regalías?': 'No informado en el proceso' };
+        for (const [, l] of SEG_SRC) o[l] = '';
+        Object.assign(o, { 'Tipo de regalía (DNP)': '', 'Bienios con recursos': '', 'Avance físico %': '', 'Avance financiero %': '', 'Pagos − obra (puntos)': '', 'Valor pagado (SECOP)': '', 'Aprobado Hacienda 2025–2026': '', 'Pagado Hacienda 2025–2026': '', Estado: estado || '',
+          '¿Publicado en SECOP?': 'Sí', '¿Hay contrato entidad–fondo en SECOP?': '', 'Procesos del fondo en SECOP para este territorio': '', 'Valor de esos procesos': '', 'Oferentes o respuestas': ofer, Adjudicado: adju, Sistema: sis, 'ID contrato o proceso': id, BPIN: '', Alertas: '', Enlace: link, _dep: T.dep, _mun: T.mun, _key: key, _id: sis + '|' + id, _v: num(base) });
+        return o;
+      };
+      for (const x of proc.rows) { if (!isFondo(x.entidad, x.nit_entidad)) continue; addD(dRow(x.entidad, x.nit_entidad, [x.nombre_del_procedimiento, x.descripci_n_del_procedimiento].filter(Boolean).join('. '), x.tipo_de_contrato, x.precio_base, x.valor_total_adjudicacion, x.fecha_de_publicacion_del, 'Publicación del proceso', x.modalidad_de_contratacion, x.justificaci_n_modalidad_de, x.nombre_del_proveedor, x.respuestas_al_procedimiento != null ? num(x.respuestas_al_procedimiento) : '', x.adjudicado || '', x.estado_resumen || x.estado_del_procedimiento, 'SECOP II · procesos', x.id_del_proceso, urlOf(x.urlproceso))); }
+      for (const x of own2.rows) { if (!isFondo(x.nombre_entidad, x.nit_entidad)) continue; addD(dRow(x.nombre_entidad, x.nit_entidad, x.objeto_del_contrato, x.tipo_de_contrato, x.valor_del_contrato, x.valor_del_contrato, x.fecha_de_firma, 'Firma del contrato', x.modalidad_de_contratacion, x.justificacion_modalidad_de, x.proveedor_adjudicado, '', 'Sí', x.estado_contrato, 'SECOP II · contratos', x.id_contrato, urlOf(x.urlproceso))); }
+      for (const x of own1.rows) { const ent = String(x.nombre_de_la_entidad || '').replace(/^[^-]{3,40} - /, ''); if (!FONDO_RX.test(normTxt(ent)) || !x.fecha_de_firma_del_contrato) continue; addD(dRow(ent, String(x.nit_de_la_entidad || '').replace(/-\d$/, ''), x.objeto_a_contratar, x.tipo_de_contrato, x.valor_contrato, x.valor_contrato, x.fecha_de_firma_del_contrato, 'Firma del contrato', x.modalidad_de_contrataci_n, '', x.nom_raz_social_contratista, '', 'Sí', x.estado_del_proceso, 'SECOP I', x.numero_del_contrato, x.url_contrato)); }
+      // --- C: proyectos de regalías con fondo ejecutor
+      const names = [...dName.keys()];
+      const keyC = (e) => { const k = ejecKey(e); if (/^\d{6,}$/.test(k)) return k; const c = clean(e); if (dName.has(c)) return dName.get(c); const m = ejecMatch(e, names); return m.length === 1 ? dName.get(m[0]) : k; };
+      const Bidx = new Set(D.rows.map((r) => r._fk + '|' + r._dep + '|' + (r._t === 'alc' ? r._mun : r._t === 'gob' ? '' : '?')));
+      const Didx = new Map(); for (const o of Drows) { const k = o._key + '|' + o._dep + '|' + (o._mun || ''); const g = Didx.get(k) || { n: 0, v: 0 }; g.n++; g.v += o._v; Didx.set(k, g); }
+      const Crows = D.sgr.rows.filter((r) => r._et === 'fondo').map((r) => {
+        const k = keyC(r.entidadejecutora); const isDep = /^DEPARTAMENTO D/i.test(r.nomocad || ''); const hasB = Bidx.has(k + '|' + r._dep + '|' + (r._mun || '')); const dv = Didx.get(k + '|' + r._dep + '|' + (r._mun || ''));
+        const hb = r.ejecucionfisica != null && r.ejecucionfinanciera != null; const fams = (r._fam || []).join(' | ');
+        const o = { 'Ruta de ejecución': 'C · El fondo es ejecutor del proyecto (DNP)', Departamento: deptName(r._dep), Municipio: munShow(r._mun), 'Entidad territorial': r._mun ? 'Alcaldía de ' + munShow(r._mun) : isDep ? 'Gobernación de ' + deptName(r._dep) : titleCase(r.nomocad || ''), 'Territorio priorizado': (r._mun && SEG_PM[r._mun] === r._dep) || (isDep && SEG_PD.includes(r._dep)) ? 'Sí' : 'No', 'Entidad en SECOP (dependencia)': '(no hay: registro del DNP · ' + (r.nomocad || '') + ')', 'NIT entidad': '', 'Tipo de entidad': r._mun ? ENT_T.alc : isDep ? ENT_T.gob : 'Órgano regional u otro', 'Fondo mixto': r.entidadejecutora, 'NIT o clave del fondo': k,
+          'Contratista del fondo (derivado)': '', Objeto: r.nombre, 'Tipo de contrato': r.sector ? 'Proyecto · ' + titleCase(r.sector) : 'Proyecto', Valor: r._v, 'Valor adjudicado': '', Fecha: '', 'Qué fecha es': 'El DNP no publica fecha; el año se deduce del BPIN', 'Año': /^\d{4}/.test(r.codigobpin || '') ? String(r.codigobpin).slice(0, 4) : '', Modalidad: 'Designación como ejecutor (art. 37, Ley 2056 de 2020)', 'Justificación': '', 'Régimen de selección': 'No aplica: designación, no contrato', 'Sin competencia': 'Sí',
+          'Origen principal del recurso': 'Regalías (SGR)', '¿Es regalías?': 'Sí' };
+        for (const [kk, l] of SEG_SRC) o[l] = kk === 'sistema_general_de_regal_as' ? r._v : '';
+        Object.assign(o, { 'Tipo de regalía (DNP)': (r._fd || []).length ? r._fd.map((x) => `${x.tipo} (${Math.round(x.share * 100)} %)`).join(' | ') : fams, 'Bienios con recursos': (r._bi || []).join(' | '), 'Avance físico %': r.ejecucionfisica != null ? num(r.ejecucionfisica) : '', 'Avance financiero %': r.ejecucionfinanciera != null ? num(r.ejecucionfinanciera) : '', 'Pagos − obra (puntos)': hb ? r._gap : '', 'Valor pagado (SECOP)': '', 'Aprobado Hacienda 2025–2026': (r._f || []).length ? sum(r._f, 'recursosaprobadosasignadosspgr') : '', 'Pagado Hacienda 2025–2026': (r._f || []).length ? sum(r._f, 'apropiacionpagada') : '', Estado: r.estado,
+          '¿Publicado en SECOP?': 'No aplica (el proyecto está en el DNP)', '¿Hay contrato entidad–fondo en SECOP?': hasB ? 'Sí, hay contratos entre esta entidad y este fondo' : 'No se encontró', 'Procesos del fondo en SECOP para este territorio': dv ? dv.n : 0, 'Valor de esos procesos': dv ? dv.v : 0, 'Oferentes o respuestas': '', Adjudicado: '', Sistema: 'DNP · Proyectos SGR', 'ID contrato o proceso': '', BPIN: r.codigobpin, Alertas: [hb && r._gap >= 30 ? 'Pagos adelante de la obra' : '', !r._ok ? 'Desaprobado' : ''].filter(Boolean).join(' | '), Enlace: `https://www.datos.gov.co/resource/mzgh-shtp.json?codigobpin=${encodeURIComponent(r.codigobpin || '')}`, _dep: r._dep });
+        return o;
+      });
+      let all = [...Brows, ...Crows, ...Drows]; const nAll = all.length; const sinTerr = Drows.filter((o) => !o._dep).length;
+      if (soloPrior) { const act = new Set([...Brows, ...Crows].filter((o) => SEG_PD.includes(o._dep)).map((o) => o['NIT o clave del fondo'])); all = all.filter((o) => SEG_PD.includes(o._dep) || (o._key && act.has(o._key))); }
+      const strip = (o) => { const c = { ...o }; for (const k of Object.keys(c)) if (k[0] === '_') delete c[k]; return c; };
+      const rows = all.map(strip);
+      // --- Resumen por entidad territorial
+      const R = new Map();
+      for (const o of all) { if (/^Derivado/.test(o['Ruta de ejecución'])) continue; const k = o.Departamento + '|' + o['Entidad territorial']; const g = R.get(k) || { Departamento: o.Departamento, 'Entidad territorial': o['Entidad territorial'], 'Territorio priorizado': o['Territorio priorizado'], 'Ruta B · contratos con fondos': 0, 'Ruta B · valor': 0, 'Ruta B · de eso, regalías': 0, 'Ruta B · de eso, recursos propios': 0, 'Ruta B · valor sin competencia': 0, 'Ruta C · proyectos con fondo ejecutor': 0, 'Ruta C · valor': 0, 'Ruta C · proyectos sin contrato entidad–fondo en SECOP': 0, 'Ruta C · proyectos con pagos adelante de la obra': 0, 'Fondos distintos': new Set() };
+        if (/^B/.test(o['Ruta de ejecución'])) { g['Ruta B · contratos con fondos']++; g['Ruta B · valor'] += o.Valor; g['Ruta B · de eso, regalías'] += o['Regalías (SGR)'] || 0; g['Ruta B · de eso, recursos propios'] += (o['Recursos propios de la entidad territorial'] || 0) + (o['Recursos propios'] || 0); if (o['Sin competencia'] === 'Sí') g['Ruta B · valor sin competencia'] += o.Valor; }
+        else { g['Ruta C · proyectos con fondo ejecutor']++; g['Ruta C · valor'] += o.Valor; if (o['¿Hay contrato entidad–fondo en SECOP?'] === 'No se encontró') g['Ruta C · proyectos sin contrato entidad–fondo en SECOP']++; if (/Pagos adelante/.test(o.Alertas)) g['Ruta C · proyectos con pagos adelante de la obra']++; }
+        g['Fondos distintos'].add(o['NIT o clave del fondo']); R.set(k, g); }
+      const resumen = [...R.values()].map((g) => ({ ...g, 'Fondos distintos': g['Fondos distintos'].size, 'Total rutas B + C': g['Ruta B · valor'] + g['Ruta C · valor'] })).sort((a, b) => b['Total rutas B + C'] - a['Total rutas B + C']);
+      // --- Resumen por fondo
+      const FM = new Map();
+      for (const o of all) { const k = o['NIT o clave del fondo']; const g = FM.get(k) || { Fondo: o['Fondo mixto'], 'NIT o clave': k, 'Ruta B · contratos recibidos': 0, 'Ruta B · valor': 0, 'Ruta C · proyectos como ejecutor': 0, 'Ruta C · valor': 0, 'Procesos y contratos propios publicados en SECOP': 0, 'Valor de lo publicado': 0, 'De eso, por régimen especial o derecho privado': 0, 'De eso, por Ley 80 con competencia': 0 };
+        if (/^B/.test(o['Ruta de ejecución'])) { g['Ruta B · contratos recibidos']++; g['Ruta B · valor'] += o.Valor; } else if (/^C/.test(o['Ruta de ejecución'])) { g['Ruta C · proyectos como ejecutor']++; g['Ruta C · valor'] += o.Valor; } else { g['Procesos y contratos propios publicados en SECOP']++; g['Valor de lo publicado'] += o.Valor; if (/especial/.test(o['Régimen de selección'])) g['De eso, por régimen especial o derecho privado'] += o.Valor; if (/con competencia/.test(o['Régimen de selección'])) g['De eso, por Ley 80 con competencia'] += o.Valor; }
+        FM.set(k, g); }
+      const fondos = [...FM.values()].map((g) => ({ ...g, 'Recibido o ejecutado (B + C)': g['Ruta B · valor'] + g['Ruta C · valor'], 'Publicado / recibido': g['Ruta B · valor'] + g['Ruta C · valor'] ? Math.round((1000 * g['Valor de lo publicado']) / (g['Ruta B · valor'] + g['Ruta C · valor'])) / 10 : '' })).sort((a, b) => b['Recibido o ejecutado (B + C)'] - a['Recibido o ejecutado (B + C)']);
+      const wb = XLSX.utils.book_new();
+      const fails = [['fuentes de recursos de los contratos', s1.ok && s2.ok], ['procesos publicados por los fondos (SECOP II)', proc.ok], ['contratos publicados por los fondos (SECOP II)', own2.ok], ['contratos publicados por los fondos (SECOP I)', own1.ok]].filter((x) => !x[1]).map((x) => x[0]);
+      const lea = [['Fondos Mixtos y Regalías · Excel de seguimiento'], [`Generado el ${new Date().toLocaleString('es-CO')} con datos abiertos oficiales consultados en vivo (datos.gov.co).`], [soloPrior ? 'Alcance: Valle del Cauca, Antioquia, Atlántico, Santander y Norte de Santander (todas las entidades de esos departamentos), más todo lo que publicaron en SECOP los fondos que tienen contratos o proyectos allí, aunque sea para otro territorio. La columna «Territorio priorizado» marca las alcaldías de Cali, Medellín, Barranquilla, Bucaramanga, Cúcuta y Barrancabermeja y las cinco gobernaciones.' : 'Alcance: todo el país.'], [''],
+        ['Cada fila de la hoja «Seguimiento» es un registro de una de tres clases, según la columna «Ruta de ejecución»:'],
+        ['  B · La entidad contrata al fondo: contrato o convenio entre una entidad pública y un fondo mixto, publicado en SECOP I o II. Trae el origen del recurso que declaró la entidad.'],
+        ['  C · El fondo es ejecutor del proyecto: proyecto de regalías en el que el DNP registra a un fondo mixto como entidad ejecutora. No es un contrato. Trae avance físico y financiero y tipo de regalía.'],
+        ['  Derivado · Contratación del propio fondo: procesos y contratos que el fondo publicó en SECOP como entidad contratante, es decir, a quién subcontrata y con qué modalidad.'], [''],
+        ['Cómo responder las preguntas frecuentes con los filtros:'],
+        ['  ¿Qué recursos se ejecutaron por fondos mixtos y de qué origen? Filtre «Ruta de ejecución» en B y C y mire «Origen principal del recurso» y las columnas por fuente.'],
+        ['  ¿La alcaldía o gobernación publicó contrato con el fondo? En las filas C, columna «¿Hay contrato entidad–fondo en SECOP?». En las filas B la respuesta es sí por definición.'],
+        ['  ¿El fondo publicó lo que contrató? En las filas C, «Procesos del fondo en SECOP para este territorio». El detalle está en las filas «Derivado».'],
+        ['  ¿Contrató por derecho privado o por Ley 80? Columna «Régimen de selección», sobre todo en las filas «Derivado».'], [''],
+        ['Límites que hay que tener presentes:'],
+        ['  Las filas «Derivado» no dicen para qué entidad se ejecutan ni con qué recursos: el territorio se deduce del texto del objeto y puede fallar.'],
+        ['  El cruce entre un proyecto (C) y los procesos del fondo es por fondo y territorio, no por proyecto. Un número mayor que cero indica que el fondo publicó algo para ese territorio, no que sea de ese proyecto.'],
+        ['  SECOP I no informa el origen del recurso. En SECOP II el origen es el que declaró la entidad y a veces está en cero.'],
+        ['  El DNP no publica fechas; el avance físico y financiero es el que reporta el ejecutor. «Hacienda 2025–2026» es lo aprobado y pagado en ese bienio, el único publicado.'],
+        ['  En los procesos, «Valor» es el precio base; el valor adjudicado suele venir en cero aunque haya contratista.'],
+        ['  Los contratos de $50.000 millones o más pueden ser errores de digitación en SECOP.'],
+        [`Registros: ${fmtN(rows.length)} en este archivo (${fmtN(nAll)} en todo el país; ${fmtN(sinTerr)} procesos de fondos sin territorio reconocible).`],
+        ...(fails.length ? [['ATENCIÓN: no respondieron estas consultas y sus datos faltan en el archivo: ' + fails.join('; ') + '. Vuelva a generarlo en unos minutos.']] : []), [''],
+        ['Fuentes: SECOP I y II (Colombia Compra Eficiente), Proyectos SGR y fuentes de financiación (DNP) y Ejecución de regalías (MinHacienda). Las alertas son señales para investigar, no pruebas de irregularidad.']];
+      const ws0 = XLSX.utils.aoa_to_sheet(lea); ws0['!cols'] = [{ wch: 160 }]; XLSX.utils.book_append_sheet(wb, ws0, 'Léame');
+      const add = (name, rr) => { const ws = rr.length ? XLSX.utils.json_to_sheet(rr) : XLSX.utils.aoa_to_sheet([['Sin registros.']]); if (rr.length) { const keys = Object.keys(rr[0]); ws['!cols'] = keys.map((k) => ({ wch: /^Objeto$/.test(k) ? 70 : Math.min(44, Math.max(12, k.length + 2, ...rr.slice(0, 100).map((r) => Math.min(44, String(r[k] ?? '').length + 1)))) })); ws['!autofilter'] = { ref: ws['!ref'] }; } XLSX.utils.book_append_sheet(wb, ws, name); };
+      add('Seguimiento', rows); add('Por entidad territorial', resumen); add('Por fondo', fondos);
+      const gl = Object.values(G).map(([t, d]) => ({ 'Término': t, Significado: d })); const wsg = XLSX.utils.json_to_sheet(gl); wsg['!cols'] = [{ wch: 44 }, { wch: 140 }]; XLSX.utils.book_append_sheet(wb, wsg, 'Glosario');
+      XLSX.writeFile(wb, `fondos_mixtos_seguimiento_${soloPrior ? '5_departamentos' : 'todo_el_pais'}_${stamp()}.xlsx`);
+      toast(`Excel de seguimiento descargado: ${fmtN(rows.length)} registros.${fails.length ? ' Faltan datos: revise la hoja Léame.' : ''}`);
+    } catch (e) { toast('No fue posible armar el Excel: ' + e.message); }
+    if (btn) { btn.disabled = false; btn.textContent = lab; }
+  }
 
   // ---------------------------------------------------------------- Descargas: CSV, Excel y PDF
   const stamp = () => isoDay(new Date());
@@ -1716,6 +1844,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const grp = (g, t) => { const ts = X.tables.filter((x) => x.g === g); return ts.length ? `<div class="stack" style="gap:6px"><span class="eyebrow">${t}</span><div class="optgrid">${ts.map((x) => `<label class="opt"><input type="checkbox" name="tb" value="${x.k}" ${x.rows.length ? '' : 'disabled'} ${g === 'desc' && x.rows.length ? 'checked' : ''}><span><b>${esc(x.l)}</b>${fmtN(x.rows.length)} filas</span></label>`).join('')}</div></div>` : ''; };
     m.innerHTML = `<div class="card"><div class="row" style="justify-content:space-between"><h3>Descargar</h3><button class="btn sm" data-x>Cerrar</button></div>
       <div class="notice info"><b>Base completa en Excel</b><span>Todo lo que carga la aplicación, sin filtros: todos los contratos de SECOP I y II con fondos mixtos, todos los proyectos de regalías con un fondo como ejecutor, todas las entidades y todos los fondos. Cada hoja trae filtros en los encabezados.</span><button class="btn lime" id="dl_master" style="width:fit-content">⬇ Descargar la base completa</button></div>
+      <div class="notice info"><b>Excel de seguimiento: rutas, origen del recurso y publicación en SECOP</b><span>Una sola tabla con tres clases de registro: contratos entidad → fondo (ruta B, con origen del recurso), proyectos de regalías con fondo ejecutor (ruta C, con avance físico y financiero) y lo que cada fondo publicó en SECOP como contratante (a quién subcontrata y si fue por Ley 80 o régimen especial). Dice si la entidad publicó contrato con el fondo.</span><div class="row"><button class="btn lime" id="dl_seg5">⬇ Cali, Valle, Medellín, Antioquia, Barranquilla, Atlántico, Santander y Norte de Santander</button><button class="btn" id="dl_segall">⬇ Todo el país</button></div></div>
       <div class="notice info"><b>Informe PDF del camino C: todos los casos</b><span>Una página por cada alcaldía o gobernación que entregó regalías a un fondo mixto como ejecutor, con un índice al inicio para saltar a cada territorio. Si tiene un departamento elegido en los filtros, sale solo ese departamento; si no, todo el país.</span><button class="btn lime" id="dl_infc" style="width:fit-content">⬇ Armar el informe del camino C</button></div>
       <span class="eyebrow">O descargue solo la selección actual</span>
       <p class="muted" style="font-size:.85rem"><b style="color:var(--ink)">${esc(X.title)}</b><br>${esc(X.sel)}</p>
@@ -1732,6 +1861,8 @@ td.objeto { min-width: 260px; max-width: 460px; }
     m.querySelectorAll('[name=fmt]').forEach((r) => { r.onchange = note; }); note();
     const close = () => m.remove();
     m.querySelector('#dl_master').onclick = (e) => exportMaster(e.currentTarget);
+    m.querySelector('#dl_seg5').onclick = (e) => exportSeguimiento(e.currentTarget, true);
+    m.querySelector('#dl_segall').onclick = (e) => exportSeguimiento(e.currentTarget, false);
     m.querySelector('#dl_infc').onclick = async (e) => { await informeC(e.currentTarget); close(); };
     m.onclick = (e) => { if (e.target === m || e.target.closest('[data-x]')) close(); };
     m.querySelector('[data-all]').onclick = () => m.querySelectorAll('[name=tb]:not(:disabled)').forEach((c) => { c.checked = true; });
