@@ -703,7 +703,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
   // Entidad territorial: las secretarías se agrupan en su alcaldía o gobernación
   const terrKey = (r) => (r._tk != null ? r._tk : (r._tk = isCore(r) ? (r._t === 'alc' ? 'A|' + r._dep + '|' + (r._mun || '') : 'G|' + r._dep) : 'E|' + (r.nit_entidad || clean(r.nombre_entidad))));
   const terrName = (k, fallback) => { const [t, d, m] = k.split('|'); return t === 'A' ? 'Alcaldía de ' + (munShow(m) || '(municipio sin dato)') : t === 'G' ? 'Gobernación de ' + (deptName(d) || '(sin departamento)') : titleCase(fallback || d); };
-  const sgrTerrKey = (r) => (r._mun ? 'A|' + r._dep + '|' + r._mun : /^DEPARTAMENTO D|^GOBERNACION/i.test(r.nomocad || '') || !/ - /.test(r.nomocad || '') ? 'G|' + r._dep : 'O|' + clean(r.nomocad || ''));
+  const sgrTerrKey = (r) => (r._mun ? 'A|' + r._dep + '|' + r._mun : !r._dep ? 'O|' + clean(r.nomocad || 'Proyecto regional') : /^DEPARTAMENTO D|^GOBERNACION/i.test(r.nomocad || '') || !/ - /.test(r.nomocad || '') ? 'G|' + r._dep : 'O|' + clean(r.nomocad || ''));
   const fondoSel = (k) => !F.fondo || (F.fondo === '@foco' ? FOCO.some((x) => x[0] === k) : k === F.fondo);
   const sgrEtOk = (r) => (F.et === 'alc' ? !!r._mun : F.et === 'gob' ? !r._mun : true);
   const sgrEk = (r) => r._ek || (r._ek = ejecKey(r.entidadejecutora));
@@ -1816,7 +1816,7 @@ td.objeto { min-width: 260px; max-width: 460px; }
     const dv = (o) => {
       o._m = modClass(o.mod, ''); o._y = yr(o.f); const T = segTerr(o.obj);
       if (T.dep) { o._dep = T.dep; o._mun = T.mun; o._ts = 'texto'; } else { const d = deptOf(o.sede); o._dep = d ? d.code : ''; o._mun = ''; o._ts = o._dep ? 'sede' : ''; }
-      o.pk = o.prov ? nitBase(o.pdoc) || clean(o.prov) : ''; nameKey.set(clean(o.fnom), o.k); return o;
+      o.pk = o.prov ? clean(o.prov) : ''; nameKey.set(clean(o.fnom), o.k); return o;
     };
     for (const x of ct.rows) {
       const ent = String(x.nombre_de_la_entidad || '').replace(/^[^-]{3,40} - /, '');
