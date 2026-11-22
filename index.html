@@ -1305,6 +1305,79 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
     drawEntityTab(ctx);
   }
 
+  // ---------------------------------------------------------------- Doble papel: lo que contrata y lo que le contratan (toda ficha)
+  const DUAL = new Map();
+  const S1D_SEL = 'nombre_de_la_entidad,nit_de_la_entidad,departamento_entidad,municipio_entidad,nom_raz_social_contratista,documento_proveedor,objeto_a_contratar,tipo_de_contrato,modalidad_de_contrataci_n,estado_del_proceso,fecha_de_firma_del_contrato,numero_del_contrato,valor_contrato,url_contrato';
+  async function loadDual(doc, pk) {
+    const n = digits(doc); const k = n + '|' + pk; if (DUAL.has(k)) return DUAL.get(k);
+    const P = getPeriod(pk); const vars = [n, ...'0123456789'.split('').map((d) => n + d)].map(sqlStr).join(',');
+    const pw = periodWhere('fecha_de_firma', P), pw1 = periodWhere('fecha_de_firma_del_contrato', P);
+    const p = Promise.all([
+      part('contratos', { select: CONTRACT_FIELDS, where: `nit_entidad=${sqlStr(n)} AND ${pw}`, order: 'fecha_de_firma DESC', limit: 5000 }),
+      part('contratos', { select: CONTRACT_FIELDS, where: `documento_proveedor in (${vars}) AND ${pw}`, order: 'fecha_de_firma DESC', limit: 5000 }),
+      part('integrado', { select: S1D_SEL, where: `origen='SECOPI' AND nit_de_la_entidad in (${vars},${[n, ...'0123456789'.split('').map((d) => n + '-' + d)].map(sqlStr).join(',')}) AND ${pw1}`, order: 'fecha_de_firma_del_contrato DESC', limit: 5000 }),
+      part('integrado', { select: S1D_SEL, where: `origen='SECOPI' AND documento_proveedor in (${vars}) AND ${pw1}`, order: 'fecha_de_firma_del_contrato DESC', limit: 5000 }),
+    ]).then(([a, b, a1, b1]) => ({ P, a, b, a1, b1 }));
+    DUAL.set(k, p); p.catch(() => DUAL.delete(k)); return p;
+  }
+  const s1ToRow = (x) => ({ _s1: true, id_contrato: 'SECOP I · ' + (x.numero_del_contrato || ''), nombre_entidad: String(x.nombre_de_la_entidad || '').replace(/^[^-]{3,40} - /, ''), nit_entidad: String(x.nit_de_la_entidad || '').replace(/-\d$/, ''), departamento: x.departamento_entidad, ciudad: x.municipio_entidad, proveedor_adjudicado: x.nom_raz_social_contratista, documento_proveedor: x.documento_proveedor, objeto_del_contrato: x.objeto_a_contratar, tipo_de_contrato: x.tipo_de_contrato, modalidad_de_contratacion: x.modalidad_de_contrataci_n, estado_contrato: x.estado_del_proceso, fecha_de_firma: x.fecha_de_firma_del_contrato, valor_del_contrato: x.valor_contrato, urlproceso: x.url_contrato });
+  function dualGroups(rows, keyF, nameF) { const m = new Map(); for (const r of rows) { const k = keyF(r); if (!k) continue; const g = m.get(k) || { k, nom: nameF(r), v: 0, n: 0 }; g.v += num(r.valor_del_contrato); g.n++; m.set(k, g); } return [...m.values()].sort((a, b) => b.v - a.v); }
+  function dualFlow(el, name, ins, outs) {
+    const cut = (s, k) => { s = String(s || ''); return s.length > k ? s.slice(0, k - 1) + '…' : s; };
+    const top = (arr, label) => { const t = arr.slice(0, 10); const rest = arr.slice(10); if (rest.length) t.push({ k: '', nom: `Otros ${fmtN(rest.length)} ${label}`, v: sum(rest, 'v'), n: sum(rest, 'n'), other: true }); return t; };
+    const L = top(ins, 'contratantes'), R = top(outs, 'contratistas');
+    if (!L.length && !R.length) { el.innerHTML = '<p class="muted">Sin contratos en el periodo para dibujar.</p>'; return; }
+    const W = 1100, rowH = 30, n = Math.max(L.length, R.length, 3), H = n * rowH + 30, xL = 330, xC = 540, xR = 760, nw = 12;
+    const y = (arr, i) => 26 + (i + 0.5) * ((H - 30) / Math.max(arr.length, 1)); const yc = 26 + (H - 30) / 2;
+    const mx = Math.max(1, ...L.map((x) => x.v), ...R.map((x) => x.v)); const w = (v) => Math.max(1.5, 20 * Math.sqrt(v / mx));
+    const c = (a, b, ya, yb) => `M${a} ${ya} C ${(a + b) / 2} ${ya}, ${(a + b) / 2} ${yb}, ${b} ${yb}`;
+    const tL = sum(ins, 'v'), tR = sum(outs, 'v'); const cH = Math.max(30, Math.min(H - 40, 30 + 6 * Math.sqrt(L.length + R.length) * 4));
+    el.innerHTML = `<div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:760px;height:auto;display:block" role="img" aria-label="De dónde recibe y a quién entrega">
+      <text x="${xL + nw}" y="12" text-anchor="end" style="font:700 10.5px var(--f-mono,monospace);fill:var(--muted);letter-spacing:.08em">LE CONTRATAN (RECIBE)</text><text x="${xR}" y="12" style="font:700 10.5px var(--f-mono,monospace);fill:var(--muted);letter-spacing:.08em">CONTRATA (ENTREGA)</text>
+      ${L.map((x, i) => `<path d="${c(xL + nw, xC, y(L, i), yc)}" fill="none" stroke="var(--blue)" stroke-opacity=".35" stroke-width="${w(x.v)}"><title>${esc(x.nom)} → ${esc(name)}: ${fullCOP(x.v)} · ${fmtN(x.n)} contratos</title></path>`).join('')}
+      ${R.map((x, i) => `<path d="${c(xC + nw, xR, yc, y(R, i))}" fill="none" stroke="var(--ok,#1F8A5B)" stroke-opacity=".38" stroke-width="${w(x.v)}"><title>${esc(name)} → ${esc(x.nom)}: ${fullCOP(x.v)} · ${fmtN(x.n)} contratos</title></path>`).join('')}
+      ${L.map((x, i) => `<g ${x.other ? '' : `data-ent="${esc(x.k)}" data-name="${esc(x.nom)}" style="cursor:pointer"`}><rect x="${xL}" y="${y(L, i) - 9}" width="${nw}" height="18" rx="3" fill="${x.other ? 'var(--muted)' : 'var(--blue)'}"/><text x="${xL - 8}" y="${y(L, i) + 4}" text-anchor="end" style="font:12px var(--f-body,sans-serif);fill:var(--ink)">${esc(cut(x.nom, 44))}</text></g>`).join('')}
+      <rect x="${xC}" y="${yc - cH / 2}" width="${nw}" height="${cH}" rx="3" fill="var(--violet,#6C3BFF)"/><text x="${xC + nw / 2}" y="${yc - cH / 2 - 8}" text-anchor="middle" style="font:800 12.5px var(--f-body,sans-serif);fill:var(--ink)">${esc(cut(name, 46))}</text>
+      <text x="${xC + nw / 2}" y="${yc + cH / 2 + 16}" text-anchor="middle" style="font:11px var(--f-body,sans-serif);fill:var(--muted)">recibe ${esc(fmtCOP(tL))} · entrega ${esc(fmtCOP(tR))}</text>
+      ${R.map((x, i) => `<g ${x.other ? '' : `data-prov="${esc(x.k)}" data-name="${esc(x.nom)}" style="cursor:pointer"`}><rect x="${xR}" y="${y(R, i) - 9}" width="${nw}" height="18" rx="3" fill="${x.other ? 'var(--muted)' : 'var(--ok,#1F8A5B)'}"/><text x="${xR + nw + 8}" y="${y(R, i) + 4}" style="font:12px var(--f-body,sans-serif);fill:var(--ink)">${esc(cut(x.nom, 44))}</text></g>`).join('')}
+    </svg></div><p class="muted" style="font-size:.76rem">Izquierda: entidades que le firmaron contratos (de dónde recibe). Derecha: a quién le firmó contratos (a dónde se va). El grosor es proporcional al valor de los contratos. Toque un nombre para abrir su ficha.</p>`;
+  }
+  async function dualCard(box, doc, name, pk, isPerson) {
+    if (!box) return;
+    box.innerHTML = '<div class="card"><h3>De dónde recibe y a quién contrata</h3><p class="loading">Consultando SECOP I y II en sus dos papeles…</p></div>';
+    let X; try { X = await loadDual(doc, pk); } catch (e) { box.innerHTML = `<div class="card"><h3>De dónde recibe y a quién contrata</h3><p class="muted">No fue posible consultar: ${esc(e.message)}</p></div>`; return; }
+    if (!box.isConnected) return;
+    const subj = isPerson ? 'La persona' : 'La entidad';
+    const A = [...X.a.rows, ...X.a1.rows.map(s1ToRow)], B = [...X.b.rows, ...X.b1.rows.map(s1ToRow)];
+    const ins = dualGroups(B, (r) => digits(r.nit_entidad) || r.nombre_entidad, (r) => r.nombre_entidad);
+    const outs = dualGroups(A, (r) => r.documento_proveedor || r.proveedor_adjudicado, (r) => r.proveedor_adjudicado);
+    const fails = [['contratos que firmó (SECOP II)', X.a], ['contratos en que fue contratada (SECOP II)', X.b], ['SECOP I como contratante', X.a1], ['SECOP I como contratista', X.b1]].filter(([, p]) => !p.ok).map(([l]) => l);
+    const cap = [X.a, X.b].some((p) => p.rows.length >= 5000);
+    box.innerHTML = `<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3>De dónde recibe y a quién contrata</h3><p class="muted" style="font-size:.82rem">${esc(X.P.l)} · SECOP I y II. Una misma entidad o persona puede contratar y ser contratada.</p></div><button class="btn lime" id="dl_dual">⬇ Excel: contrata y es contratada</button></div>
+      ${fails.length ? `<div class="notice"><b>Consulta incompleta</b><span>No respondió: ${esc(fails.join('; '))}.</span></div>` : ''}${cap ? '<div class="notice"><b>Se alcanzó el tope de 5.000 contratos</b><span>Elija un periodo más corto para ver todo.</span></div>' : ''}
+      <div class="kpis"><div class="kpi"><span class="l">${subj} es contratada</span><span class="v">${fmtCOP(sum(B, (r) => num(r.valor_del_contrato)))}</span><span class="s">${fmtN(B.length)} contratos · ${fmtN(ins.length)} contratantes</span></div><div class="kpi"><span class="l">${subj} contrata</span><span class="v">${fmtCOP(sum(A, (r) => num(r.valor_del_contrato)))}</span><span class="s">${fmtN(A.length)} contratos · ${fmtN(outs.length)} contratistas</span></div></div>
+      <div id="dual_flow"></div>
+      <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px"><button class="btn" data-dl="b" ${B.length ? '' : 'disabled'}>Contratos en que es contratada · ${fmtN(B.length)}</button><button class="btn" data-dl="a" ${A.length ? '' : 'disabled'}>Contratos que firma como contratante · ${fmtN(A.length)}</button></div>
+      <div id="dual_list"></div></div>`;
+    dualFlow($('#dual_flow', box) || box.querySelector('#dual_flow'), name || doc, ins, outs);
+    box.querySelectorAll('[data-dl]').forEach((b) => { b.onclick = () => { box.querySelectorAll('[data-dl]').forEach((x) => x.classList.toggle('primary', x === b)); const rows = b.dataset.dl === 'a' ? A : B; const el = box.querySelector('#dual_list'); el.innerHTML = `<h3 style="margin-top:12px">${b.dataset.dl === 'a' ? `${subj} contrata` : `${subj} es contratada`}</h3><div id="dual_ct"></div>`; contractTable(el.querySelector('#dual_ct'), rows); }; });
+    box.querySelector('#dl_dual').onclick = () => dualExcel(name || doc, doc, subj, X, A, B, ins, outs, isPerson);
+    box.querySelector('#dual_list').addEventListener('click', (e) => { if (e.target.closest('[data-ent],[data-prov],[data-contract],[data-person],[data-fondo]')) e.stopPropagation(); });
+    bindNav(box); box.addEventListener('click', (e) => { if (e.target.closest('[data-ent],[data-prov],[data-contract],[data-person],[data-fondo]')) e.stopPropagation(); });
+  }
+  function dualExcel(name, doc, subj, X, A, B, ins, outs, isPerson) {
+    if (!window.XLSX) return toast('No se pudo cargar la librería de Excel');
+    const row = (r, rol) => ({ 'Rol': `${subj} ${rol}`, Sistema: r._s1 ? 'SECOP I' : 'SECOP II', 'Entidad contratante': r.nombre_entidad, 'NIT entidad': r.nit_entidad, Departamento: r.departamento, Municipio: r.ciudad, Contratista: r.proveedor_adjudicado, 'Documento contratista': r.documento_proveedor, 'ID contrato': r.id_contrato, Referencia: r.referencia_del_contrato || '', Objeto: r.objeto_del_contrato, 'Tipo de contrato': r.tipo_de_contrato, Modalidad: r.modalidad_de_contratacion, 'Justificación': r.justificacion_modalidad_de || '', Firma: fmtDate(r.fecha_de_firma).replace('—', ''), Inicio: fmtDate(r.fecha_de_inicio_del_contrato).replace('—', ''), Fin: fmtDate(r.fecha_de_fin_del_contrato).replace('—', ''), Valor: num(r.valor_del_contrato), 'Valor pagado': r._s1 ? '' : num(r.valor_pagado), Estado: r.estado_contrato, 'Enlace SECOP': urlOf(r.urlproceso) });
+    const rows = [...B.map((r) => row(r, 'es contratada')), ...A.map((r) => row(r, 'contrata'))];
+    const contra = [...ins.map((g) => ({ 'Rol': `${subj} es contratada`, Contraparte: g.nom, Documento: g.k, Contratos: g.n, Valor: g.v })), ...outs.map((g) => ({ 'Rol': `${subj} contrata`, Contraparte: g.nom, Documento: g.k, Contratos: g.n, Valor: g.v }))];
+    const wb = XLSX.utils.book_new();
+    const lea = XLSX.utils.aoa_to_sheet([[`${name} · contratos en que contrata y en que es contratada`], [`Documento: ${isPerson ? maskDoc(doc, 'Cédula') : doc} · ${X.P.l} · generado el ${new Date().toLocaleString('es-CO')} con datos de datos.gov.co (SECOP II y SECOP I).`], [''], [`«${subj} contrata»: contratos en que figura como entidad contratante. «${subj} es contratada»: contratos en que figura como contratista.`], [`Contratos: ${rows.length} (${B.length} como contratista, ${A.length} como contratante).`], ['SECOP I no informa valor pagado. Los contratos con la misma fecha y valor pueden ser modificaciones registradas aparte.']]);
+    lea['!cols'] = [{ wch: 130 }]; XLSX.utils.book_append_sheet(wb, lea, 'Léame');
+    const add = (nm, rr) => { const ws = XLSX.utils.json_to_sheet(rr.length ? rr : [{ Nota: 'Sin registros' }]); const keys = Object.keys(rr[0] || {}); if (rr.length) { ws['!autofilter'] = { ref: ws['!ref'] }; ws['!cols'] = keys.map((k) => ({ wch: k === 'Objeto' ? 70 : Math.min(40, Math.max(10, k.length + 2, ...rr.slice(0, 60).map((r) => Math.min(40, String(r[k] ?? '').length + 1)))) })); keys.forEach((k, C) => { for (let R = 1; R <= rr.length; R++) { const c = ws[XLSX.utils.encode_cell({ r: R, c: C })]; if (!c) continue; if (k === 'Enlace SECOP' && /^https?:/.test(String(c.v))) c.l = { Target: String(c.v), Tooltip: 'Abrir en SECOP' }; else if (c.t === 'n' && /Valor/.test(k)) c.z = '#,##0'; } }); } XLSX.utils.book_append_sheet(wb, ws, nm); };
+    add('Contratos', rows); add('Contrapartes', contra);
+    saveFile(`contrata_y_es_contratada_${digits(doc)}_${X.P.k}.xlsx`, new Blob([XLSX.write(wb, { type: 'array', bookType: 'xlsx' })]));
+  }
+
   function drawEntityTab(ctx) {
     const D = ctx.D; const body = $('#tabbody'); const P = D.period;
     if (ctx.tab === 'resumen') {
@@ -1332,6 +1405,7 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
             <div><span>Última actualización de SECOP II</span><span>${state.meta.contratos?.updated ? isoDay(state.meta.contratos.updated) : 'no verificada'}</span></div>
           </div><p class="muted" style="font-size:.78rem">SECOP I se reporta aparte: sus contratos no entran en los indicadores porque el conjunto integrado no trae modalidad ni pagos comparables.</p>${qlink(D.secop1)}</div>
         </div>`;
+      body.querySelector('.kpis').insertAdjacentHTML('afterend', '<div id="dualbox"></div>'); dualCard(body.querySelector('#dualbox'), ctx.nit, ctx.name, ctx.pk, false);
       body.querySelector('[data-goto]').onclick = () => $('#tabs [data-tab="alertas"]').click();
     } else if (ctx.tab === 'alertas') {
       body.innerHTML = `<div class="notice info"><b>Cómo leer esto</b><span>Cada indicador muestra qué se detectó, con qué datos, cómo se calculó y qué lo podría explicar. Una alerta es una razón para preguntar, no una conclusión. Los umbrales están en <a href="#metodologia">Metodología</a>.</span></div>` + ctx.ind.map(alertCard).join('');
@@ -1573,7 +1647,7 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
         body.innerHTML = `<div class="notice info"><b>Distinga estados</b><span>Sanciones contractuales publicadas en SECOP. En SECOP II se buscan por los contratos del periodo elegido (hasta 120). "A la espera de aprobación" no es una decisión en firme.</span></div><div class="card"><h3>SECOP II</h3>${sancionesTable2(D.multas2)}${qlink(D.multas2)}</div><div class="card"><h3>SECOP I</h3>${sancionesTable1(D.multas1)}${qlink(D.multas1)}</div>`;
         bindNav(body);
       }
-      if (ctx.tab === 'resumen') bindNav(body);
+      if (ctx.tab === 'resumen') { bindNav(body); const kp = body.querySelector('.kpis'); if (kp) { kp.insertAdjacentHTML('afterend', '<div id="dualbox"></div>'); dualCard(body.querySelector('#dualbox'), ctx.doc, ctx.name || (nm[0] || {}).nom, ctx.pk, !isCompanyDoc(tipo)); } }
       if (ctx.tab === 'documentos') { provDocsTab(ctx, body); return; }
       if (ctx.tab === 'politica') { politicsTab(ctx, body, ctx.doc, D.ents.rows); return; }
       const gj = body.querySelector('[data-go-jus]'); if (gj) gj.onclick = () => { state.jus = { q: gj.dataset.goJus, tipo: isCompanyDoc(tipo) ? 'jur' : 'nat' }; navTo('justicia'); };
@@ -1761,7 +1835,7 @@ td .sub { display: block; color: var(--muted); font-size: var(--s-xs); }
         const nq = encodeURIComponent(`"${pepName}"`);
         const webCard = D.pep.rows.length && pepName ? `<div class="card"><h3>Presencia pública en línea</h3><p class="muted" style="font-size:.85rem">Por tener un cargo registrado en el SIGEP se ofrecen búsquedas abiertas por su nombre. RADAR no rastrea, no guarda ni atribuye cuentas: confirme usted que cada perfil corresponde a esta persona, porque los homónimos son frecuentes.</p><div class="row"><a class="btn" href="https://x.com/search?q=${nq}&f=user" target="_blank" rel="noopener">Cuentas en X ↗</a><a class="btn" href="https://news.google.com/search?q=${nq}&hl=es-419&gl=CO&ceid=CO:es-419" target="_blank" rel="noopener">Noticias ↗</a><a class="btn" href="https://www.google.com/search?q=${nq}+${encodeURIComponent('"' + (D.pep.rows[0].nombre_entidad || '') + '"')}" target="_blank" rel="noopener">Web ↗</a></div></div>` : '';
         body.innerHTML = `${dual ? '<div class="notice info"><b>Doble rol</b><span>Esta persona aparece como contratista del Estado y también en funciones públicas (cargo registrado en el SIGEP o supervisión u ordenación del gasto). Puede ser normal, por ejemplo, un contratista que luego fue nombrado. Compare fechas y entidades antes de sacar conclusiones.</span></div>' : ''}<div class="grid2">${pepCard}${provCard}</div>${funCard}${rlCard}${webCard}`;
-        bindNav(body);
+        bindNav(body); body.insertAdjacentHTML('afterbegin', '<div id="dualbox"></div>'); dualCard(body.querySelector('#dualbox'), ctx.doc, pepName || ctx.name || ctx.doc, 'todo', true);
       } else if (ctx.tab === 'politica') {
         politicsTab(ctx, body, ctx.doc, D.prov2.rows.map((r) => ({ nom: r.ent, nit: r.nit })));
       } else {
